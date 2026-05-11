@@ -1,0 +1,30 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local media and generated editing artifacts
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.mp3
+*.wav
+*.aac
+analysis/
+alignment/
+compose/
+frames/
+output/
+qa_frames/
+shots/
+subtitles/
+tts/
+tts_*/
+workflow_state*.json
+
+# Local secrets
+.env
+.env.*
