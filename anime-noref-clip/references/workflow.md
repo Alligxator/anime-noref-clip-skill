@@ -2,7 +2,7 @@
 
 ## Source Of Truth
 
-This file is canonical for detailed artifact schemas, `workflow_state.json` fields, gate thresholds, and the 22-row execution table. `../SKILL.md` is the activation and summary layer; it should point here instead of carrying independent copies of detailed rows or thresholds. `story_styles.md` is canonical for story-style preset definitions. When a production rule changes, update this file, `../scripts/validate_workflow_state.py`, and any affected files in `../templates/project/tools/` together.
+This file is canonical for detailed artifact schemas, `workflow_state.json` fields, gate thresholds, and the 22-row execution table. `../SKILL.md` is the activation and summary layer; it should point here instead of carrying independent copies of detailed rows or thresholds. `story_styles.json` is canonical for machine-readable story-style preset definitions, and `story_styles.md` is the human guide. When a production rule changes, update this file, `../scripts/validate_workflow_state.py`, and any affected files in `../templates/project/tools/` together.
 
 ## Artifact Schema Targets
 
@@ -118,7 +118,7 @@ Retention brief:
 ```json
 {
   "story_style": "style_01_aggressive_youtube_cold_start",
-  "story_style_preset": "references/story_styles.md#style_01_aggressive_youtube_cold_start",
+  "story_style_preset": "references/story_styles.json#styles/style_01_aggressive_youtube_cold_start",
   "platform": "youtube_cold_start",
   "target_duration_sec": 60,
   "opening_goal": "2秒内制造反常识冲突",
@@ -580,13 +580,14 @@ This is a hard pause. If the cutting strategy is missing, stop after source disc
 
 After the user chooses, use this choice to tune shot detection thresholds and representative-frame sampling density. Do not tune a maximum shot duration by creating renderable artificial cuts, and do not trim long real shots during indexing. Run `scripts/validate_workflow_state.py <project>/workflow_state.json --gate cut` before any cut-dependent work when a state file exists.
 
-Before retention artifacts, resolve a story style preset from `references/story_styles.md`. If the user does not specify a style, use `style_01_aggressive_youtube_cold_start`, which preserves the previous default aggressive cold-start behavior:
+Before retention artifacts, resolve a story style preset from machine-loadable `references/story_styles.json`. If the user does not specify a style, use `style_01_aggressive_youtube_cold_start`, which preserves the previous default aggressive cold-start behavior:
 
 ```json
 {
   "story_style": "style_01_aggressive_youtube_cold_start",
-  "story_style_preset": "references/story_styles.md#style_01_aggressive_youtube_cold_start",
+  "story_style_preset": "references/story_styles.json#styles/style_01_aggressive_youtube_cold_start",
   "story_style_label": "Aggressive YouTube Cold Start",
+  "story_style_config": "references/story_styles.json",
   "retention_mode": "aggressive_youtube_cold_start",
   "hook_strategy": "multi_hook_with_payoff",
   "nonlinear_teaser_allowed": true,
@@ -609,9 +610,9 @@ Before retention artifacts, resolve a story style preset from `references/story_
 }
 ```
 
-Cold-start hooks in `style_01_aggressive_youtube_cold_start` must be source-supported and paid off or clarified within 6-15 seconds. Empty sensational phrasing is not allowed. A hook is valid only when grounded in visible danger, contradiction, dialogue confession, emotional reversal, character choice, object clue, identity mismatch, consequence shown on screen, or a source-supported future outcome used as a reviewed teaser. Future styles must be added in `references/story_styles.md` first, then reflected in workflow-state validation when they need hard checks.
+Cold-start hooks in `style_01_aggressive_youtube_cold_start` must be source-supported and paid off or clarified within 6-15 seconds. Empty sensational phrasing is not allowed. A hook is valid only when grounded in visible danger, contradiction, dialogue confession, emotional reversal, character choice, object clue, identity mismatch, consequence shown on screen, or a source-supported future outcome used as a reviewed teaser. Future styles must be added in `references/story_styles.json`, validated with `scripts/validate_story_styles.py`, and summarized in `references/story_styles.md`.
 
-Pacing defaults:
+Default-style pacing defaults:
 
 - Cold open may use 0.6-1.0s fast cuts for the first 3-5 seconds.
 - If nonlinear teaser shots are used, return to the main timeline within 6-8 seconds.
@@ -637,14 +638,15 @@ Minimum shape:
 
 ```json
 {
-  "skill_version": "v1.4.11",
+  "skill_version": "v1.4.12",
   "project": "轮回7次的恶役千金_EP01",
   "current_phase": "creative_qc",
   "decisions": {
     "cut_strategy": "detailed",
     "story_style": "style_01_aggressive_youtube_cold_start",
-    "story_style_preset": "references/story_styles.md#style_01_aggressive_youtube_cold_start",
+    "story_style_preset": "references/story_styles.json#styles/style_01_aggressive_youtube_cold_start",
     "story_style_label": "Aggressive YouTube Cold Start",
+    "story_style_config": "references/story_styles.json",
     "retention_mode": "aggressive_youtube_cold_start",
     "hook_strategy": "multi_hook_with_payoff",
     "nonlinear_teaser_allowed": true,
@@ -682,6 +684,7 @@ Minimum shape:
     "output_aspect": true
   },
   "artifacts": {
+    "story_styles_config": "references/story_styles.json",
     "source_media": "source/EP01.mkv",
     "shot_metadata": "shots.json",
     "frame_extract_report": "analysis/frame_extract_report.json",
@@ -871,11 +874,11 @@ Hard gate rules:
 
 - Cut gate requires `decisions.cut_strategy` to be `rough` or `detailed` and `approvals.cut_strategy=true`. For workflow states using skill version `v1.4.7` or newer, it also requires `checks.project_tools_initialized_from_skill_template=true` and `checks.project_tools_copied_from_old_project=false`. No cut-dependent artifacts should be generated before this gate passes.
 - Story gate requires Cut gate plus `artifacts.shot_metadata`, `artifacts.frame_extract_report`, `checks.frame_extract_complete=true`, `checks.frame_extract_missing_count=0`, `checks.frame_extract_saved_images == checks.frame_extract_expected_images`, `checks.long_shot_multi_sample_done=true`, `checks.render_level_duration_splits_absent=true`, subagent-generated `artifacts.visual_tags`, `checks.gpt_visual_tagging_done=true`, and `checks.black_fade_metadata=true`. No contact sheets, subagent visual tagging, `story_beats`, `episode_summary`, `story_atoms`, `retention_brief`, `hook_candidates`, `retention_shot_pool`, `script_variants`, `script`, `final_shots`, script-to-shot review, or selected-shot contact sheet should be generated before frame extraction completeness passes. Local inspection, subtitle fusion, transcript summaries, or manual notes cannot satisfy this gate.
-- Style gate applies to workflow states using skill version `v1.4.11` or newer before retention artifacts. It requires `decisions.story_style`, `decisions.story_style_preset`, `decisions.story_style_label`, and `checks.story_style_preset_resolved=true`. For `style_01_aggressive_youtube_cold_start`, it also requires `decisions.retention_mode="aggressive_youtube_cold_start"` and `decisions.hook_strategy="multi_hook_with_payoff"`.
-- Creative gate applies before review/TTS in `aggressive_youtube_cold_start` mode. It requires Story gate plus the Style gate for `v1.4.11+` states, `artifacts.story_atoms`, `artifacts.retention_brief`, `artifacts.hook_candidates`, `checks.hook_candidates_count >= 8`, `checks.chosen_hook_supported=true`, `artifacts.retention_shot_pool`, `checks.retention_shot_pool_done=true`, `artifacts.source_blocks`, `artifacts.shot_block_report`, `artifacts.script_variants`, `checks.script_variants_count >= 3`, `artifacts.script`, `artifacts.final_shots`, `artifacts.retention_qc`, `checks.creative_retention_qc_passed=true`, `checks.unsupported_claims_count=0`, `checks.generic_exposition_lines <= 1`, `checks.first_3s_visual_salience_passed=true`, `checks.rehook_interval_max_sec <= 10` unless an emotional-hold exception is documented, `checks.cold_open_duration_sec <= decisions.cold_open_max_sec`, `checks.returns_to_main_timeline_sec <= 8` when nonlinear cold open is used, `checks.selected_shot_count` within `checks.target_shot_count_min/max` for 60-second clips, `checks.post_hook_min_shot_duration_sec >= decisions.post_hook_min_shot_duration`, `checks.dialogue_scene_min_shot_duration_sec >= decisions.dialogue_scene_min_shot_duration`, `checks.post_hook_contiguous_source_blocks=true`, `checks.script_units_bound_to_blocks=true`, `checks.large_jumps_only_at_beat_boundaries=true`, `checks.large_jump_reasons_recorded=true`, `checks.repeated_framing_penalty_applied=true`, `checks.prefer_fewer_longer_shots=true`, `checks.nonlinear_exceptions_count <= decisions.max_nonlinear_exceptions`, `checks.monotonic_main_path=true`, `checks.op_ed_overlap_count=0`, and `checks.unique_shots=true`. If nonlinear teasers are allowed and used, require `checks.nonlinear_exceptions_reviewed=true`.
-- TTS gate requires Story gate plus the Creative gate when `decisions.retention_mode=aggressive_youtube_cold_start`, `approvals.script_to_shot_review=true`, `artifacts.script`, `artifacts.final_shots`, `artifacts.script_to_shot_review`, `decisions.tts_mode=full_script`, and the fixed voice for the target language.
+- Style gate applies to workflow states using skill version `v1.4.11` or newer before retention artifacts. In `v1.4.12+`, run `scripts/validate_workflow_state.py <project>/workflow_state.json --gate style` after resolving the preset. The gate loads `references/story_styles.json`, requires `decisions.story_style`, `decisions.story_style_preset`, `decisions.story_style_label`, `decisions.story_style_config`, `artifacts.story_styles_config`, and `checks.story_style_preset_resolved=true`, validates the preset anchor and label, and checks all non-overridden `decision_overlay` fields plus scaled target shot-count bounds.
+- Creative gate applies before review/TTS for v1.4.12 story-style workflows. It requires Story gate plus the Style gate for `v1.4.11+` states, `artifacts.story_atoms`, `artifacts.retention_brief`, `artifacts.hook_candidates`, `checks.hook_candidates_count` meeting the preset `creative_qc_profile.min_hook_candidates`, `checks.chosen_hook_supported=true`, `artifacts.retention_shot_pool`, `checks.retention_shot_pool_done=true`, `artifacts.source_blocks`, `artifacts.shot_block_report`, `artifacts.script_variants`, `checks.script_variants_count >= 3`, `artifacts.script`, `artifacts.final_shots`, `artifacts.retention_qc`, `checks.creative_retention_qc_passed=true`, style-profile claim/exposition/rehook thresholds, `checks.cold_open_duration_sec <= decisions.cold_open_max_sec`, return-to-main-timeline checks when nonlinear shots are allowed or used, `checks.selected_shot_count` within `checks.target_shot_count_min/max`, `checks.post_hook_min_shot_duration_sec >= decisions.post_hook_min_shot_duration`, `checks.dialogue_scene_min_shot_duration_sec >= decisions.dialogue_scene_min_shot_duration`, source-block continuity checks required by the preset, `checks.script_units_bound_to_blocks=true`, `checks.large_jumps_only_at_beat_boundaries=true`, `checks.large_jump_reasons_recorded=true`, `checks.repeated_framing_penalty_applied=true`, `checks.prefer_fewer_longer_shots=true`, `checks.nonlinear_exceptions_count <= decisions.max_nonlinear_exceptions`, `checks.monotonic_main_path=true`, preset `op_ed_overlap_count`, and preset `unique_shots` behavior. If nonlinear teasers are not allowed, `checks.nonlinear_exceptions_count` must be `0`; if they are allowed and used, require `checks.nonlinear_exceptions_reviewed=true`.
+- TTS gate requires Story gate plus the Creative gate for v1.4.11+ story-style workflows or when `decisions.retention_mode=aggressive_youtube_cold_start`, `approvals.script_to_shot_review=true`, `artifacts.script`, `artifacts.final_shots`, `artifacts.script_to_shot_review`, `decisions.tts_mode=full_script`, and the fixed voice for the target language.
 - Post-TTS pacing gate requires TTS gate plus `artifacts.continuous_tts_audio`, `artifacts.tts_generation_manifest`, `artifacts.tts_boundaries`, `artifacts.post_tts_pacing_report`, `artifacts.stable_subwindows`, `artifacts.source_buffer_report`, `checks.real_tts_duration_used=true`, `checks.real_tts_duration_sec`, `checks.post_tts_pacing_repair_done=true`, `checks.post_tts_pacing_repair_passed=true`, `checks.post_tts_speed_range_passed=true`, `checks.post_tts_shot_count_passed=true`, `checks.stable_subwindows_done=true`, `checks.safe_tail_buffer_policy_applied=true`, `checks.safe_render_tail_buffer_frames <= 2`, `checks.source_buffer_crosses_cut=false`, `checks.language_workflow_state_isolated=true`, and the same shot-count/speed range checks used by compose. English outputs also require `checks.english_word_budget_passed=true` and `checks.english_word_count` within the configured budget.
-- Compose gate requires Post-TTS pacing gate plus `decisions.cut_strategy`, `decisions.output_aspect`, `approvals.output_aspect=true`, `artifacts.strict_alignment`, `artifacts.alignment_qc_report`, `artifacts.subtitle_file`, `artifacts.subtitle_timing_report`, `checks.tts_single_file_only=true`, `checks.tts_unit_audio_residue_count=0`, `checks.tts_concat_manifest_absent=true`, `checks.tts_real_boundaries_captured=true`, `checks.subtitle_timing_from_real_tts=true`, `checks.subtitle_word_boundary_cue_merge_done=true`, `checks.subtitle_semantic_segmentation_done=true`, `checks.subtitle_language_aware_segmentation=true`, `checks.subtitle_boundary_alignment_checked=true`, `checks.subtitle_cross_sentence_boundary_count=0`, `checks.subtitle_orphan_fragment_count=0`, `checks.subtitle_bad_line_break_count=0`, `checks.subtitle_max_cue_duration_sec <= 2.2`, `checks.subtitle_min_cue_duration_sec >= 0.3`, `checks.multilingual_timing_isolated=true`, `checks.alignment_solves_shot_count_before_speed=true`, hook speed within `0.75x-1.35x`, post-hook speed within `0.88x-1.18x`, non-hook speed within `0.75x-1.25x`, `checks.tpad_clone_total_frames <= 2`, `checks.clone_padding_used_only_final_fallback=true`, `checks.black_fade_metadata=true`, and `checks.subtitle_trailing_punctuation_removed=true`. For workflow states using skill version `v1.4.9` or newer, it also requires `artifacts.tts_boundary_table`, `artifacts.semantic_cue_plan`, `checks.subtitle_subagent_boundary_group_plan_done=true`, `checks.subtitle_semantic_segmentation_source="subagent_boundary_group_plan"`, `checks.subtitle_boundary_group_mismatch_count=0`, `checks.subtitle_boundary_group_gap_count=0`, `checks.subtitle_boundary_group_overlap_count=0`, `checks.subtitle_boundary_group_uncovered_count=0`, and `checks.subtitle_boundary_group_duration_violation_count=0`. For `v1.4.8` states only, it requires the older subagent text cue plan checks. For Edge TTS outputs, also require `checks.tts_word_boundaries_used=true`.
+- Compose gate requires Post-TTS pacing gate plus `decisions.cut_strategy`, `decisions.output_aspect`, `approvals.output_aspect=true`, `artifacts.strict_alignment`, `artifacts.alignment_qc_report`, `artifacts.subtitle_file`, `artifacts.subtitle_timing_report`, `checks.tts_single_file_only=true`, `checks.tts_unit_audio_residue_count=0`, `checks.tts_concat_manifest_absent=true`, `checks.tts_real_boundaries_captured=true`, `checks.subtitle_timing_from_real_tts=true`, `checks.subtitle_word_boundary_cue_merge_done=true`, `checks.subtitle_semantic_segmentation_done=true`, `checks.subtitle_language_aware_segmentation=true`, `checks.subtitle_boundary_alignment_checked=true`, `checks.subtitle_cross_sentence_boundary_count=0`, `checks.subtitle_orphan_fragment_count=0`, `checks.subtitle_bad_line_break_count=0`, `checks.subtitle_max_cue_duration_sec <= 2.2`, `checks.subtitle_min_cue_duration_sec >= 0.3`, `checks.multilingual_timing_isolated=true`, `checks.alignment_solves_shot_count_before_speed=true`, hook/post-hook/non-hook speed within the resolved preset ranges in `decisions.*_speed_range`, `checks.tpad_clone_total_frames <= 2`, `checks.clone_padding_used_only_final_fallback=true`, `checks.black_fade_metadata=true`, and `checks.subtitle_trailing_punctuation_removed=true`. For workflow states using skill version `v1.4.9` or newer, it also requires `artifacts.tts_boundary_table`, `artifacts.semantic_cue_plan`, `checks.subtitle_subagent_boundary_group_plan_done=true`, `checks.subtitle_semantic_segmentation_source="subagent_boundary_group_plan"`, `checks.subtitle_boundary_group_mismatch_count=0`, `checks.subtitle_boundary_group_gap_count=0`, `checks.subtitle_boundary_group_overlap_count=0`, `checks.subtitle_boundary_group_uncovered_count=0`, and `checks.subtitle_boundary_group_duration_violation_count=0`. For `v1.4.8` states only, it requires the older subagent text cue plan checks. For Edge TTS outputs, also require `checks.tts_word_boundaries_used=true`.
 - Delivery gate requires compose gate plus `artifacts.final_video`, `artifacts.qa_summary`, `artifacts.frame_quantized_alignment`, `artifacts.rendered_timing_drift_report`, `artifacts.internal_jump_scan_report`, `checks.frame_quantized_alignment=true`, `checks.rendered_timeline_probe_passed=true`, `checks.max_line_boundary_drift_ms <= 80`, `checks.internal_jump_scan_done=true`, `checks.internal_jump_scan_passed=true`, `checks.internal_jump_count=0`, `checks.ffprobe_passed=true`, and `checks.blackdetect_passed=true`. For `vertical_9_16` or `both`, it also requires `artifacts.vertical_layout_qa`, `artifacts.layout_qa_frames`, `checks.vertical_layout_full_frame_foreground=true`, `checks.vertical_layout_blurred_background=true`, `checks.vertical_filter_split_before_scale=true`, `checks.foreground_centered_in_vertical_canvas=true`, `checks.foreground_vertically_centered=true`, `checks.foreground_vertical_center_error_px <= 4`, `checks.subtitle_position_based_on_foreground_box=true`, `checks.subtitle_inside_main_picture=true`, `checks.subtitle_not_in_blurred_background=true`, and `checks.layout_qa_frames_checked=true`. If `decisions.watermark_enabled=true`, it also requires `decisions.watermark_text`, `decisions.watermark_strategy`, `checks.watermark_strategy_applied=true`, `checks.watermark_strategy_recorded=true`, and `checks.watermark_visibility_checked=true`.
 
 ## Table-Driven Execution
@@ -899,7 +902,7 @@ Rows must preserve this order unless the user explicitly changes the deliverable
 4. GPT visual tagging by `gpt-5.5` subagents and story gate — subagent JSONL required; local notes do not count.
 5. Dialogue/frame fusion — fuse transcript plus visual tags; do not write story from transcript alone.
 6. Story atom extraction — source-supported atoms only; no narration yet.
-7. Story style preset and retention brief — resolve `references/story_styles.md` preset before hook/payoff/skip rules.
+7. Story style preset and retention brief — resolve `references/story_styles.json` preset before hook/payoff/skip rules.
 8. Hook candidates — at least 8 supported hooks; reject unsupported hype.
 9. Retention shot pool — score shots and blocks; penalize continuity cost and repetition.
 10. Script variants — at least 3 variants; source-supported micro-hooks only.
@@ -1064,7 +1067,7 @@ After normalization, update `workflow_state.json` with `checks.gpt_visual_taggin
 Use separate narrow prompts for creative stages so each artifact can be audited:
 
 - Story atoms: output JSON only, do not write narration, every atom must be supported by dialogue or visual tags, prefer conflict/danger/reversal/confession/choice/object clue/emotional contradiction, and use role terms instead of IP names.
-- Story style preset: resolve a preset from `references/story_styles.md` before retention brief, record it in `workflow_state.json`, and apply its decision overlay to downstream prompts.
+- Story style preset: resolve a preset from `references/story_styles.json` before retention brief, record it in `workflow_state.json`, run the `style` gate, and apply its decision overlay to downstream prompts.
 - Hook candidates: generate at least 8 hooks with `hook_id`, `type`, `text`, `first_shots`, `supported_by_atoms`, support dialogue, scores, spoiler risk, payoff availability, and `why_it_hooks`. Reject unsupported sensational hooks.
 - Retention shot pool: score only what is visible or strongly supported by nearby dialogue. Penalize OP/ED/preview, black/fade, unclear framing, confusing out-of-order shots, repeated same-framing close-ups, and scattered shots with high continuity cost.
 - Source blocks: group adjacent source shots into coherent story blocks and map script units to those blocks. Do not optimize the body by picking isolated high-energy shots one by one.
@@ -1136,12 +1139,12 @@ Cold-open teaser exceptions are not allowed to use OP/ED/preview shots unless th
 
 ## Retention Pipeline
 
-Run these creative stages after dialogue/frame fusion and before script-to-shot review. The listed behavior is the `style_01_aggressive_youtube_cold_start` preset from `references/story_styles.md`; future styles should keep the same artifact sequence but change the preset-driven prompt bias, shot-selection bias, and QC profile.
+Run these creative stages after dialogue/frame fusion and before script-to-shot review. The listed behavior is the `style_01_aggressive_youtube_cold_start` preset from `references/story_styles.json`; future styles should keep the same artifact sequence but change the preset-driven prompt bias, shot-selection bias, and QC profile.
 
 1. Extract `story_atoms.json`. Do not write narration yet. Keep atoms compact, source-supported, and biased toward conflict, choice, danger, reversal, secret, contradiction, object clue, or emotional consequence. Mark weak exposition atoms so the script can compress or skip them.
-2. Resolve `decisions.story_style` from `references/story_styles.md`. If unspecified, use `style_01_aggressive_youtube_cold_start`; record `story_style`, `story_style_preset`, `story_style_label`, and `checks.story_style_preset_resolved=true`.
+2. Resolve `decisions.story_style` from `references/story_styles.json`. If unspecified, use `style_01_aggressive_youtube_cold_start`; record `story_style`, `story_style_preset`, `story_style_label`, `checks.story_style_preset_resolved=true`, and scaled target shot-count bounds.
 3. Build `retention_brief.json` using the resolved preset. It must define the main reason to keep watching, first 2-second hook, first 10-second question, midpoint payoff, strongest ending point, spoiler policy, skipped source ranges, allowed operations, and forbidden operations.
-4. Generate at least 8 supported hooks in `hook_candidates.json`. Choose the hook with the best mix of source support, visual salience, mystery/conflict, and payoff availability. Reject loud but unsupported hooks.
+4. Generate at least the preset's required number of supported hooks in `hook_candidates.json` (`8` for the default cold-start and action styles). Choose the hook with the best mix of source support, visual salience, mystery/conflict, and payoff availability. Reject loud but unsupported hooks.
 5. Score `retention_shot_pool.json`. Reserve the strongest clear shots for the first 3 seconds, re-hooks, reveals, and payoffs. Prefer emotionally or visually legible shots over neutral connective shots.
 6. Generate at least three script variants in `script_variants.json`: `A_clear_plot`, `B_aggressive_retention`, and `C_high_density_reversal`. Prefer `B_aggressive_retention` unless it fails support or visual-match checks.
 7. Select the final `script.json`, map it to `final_shots.json`, document any nonlinear shots in `nonlinear_exceptions.json`, then run `retention_qc.json`.

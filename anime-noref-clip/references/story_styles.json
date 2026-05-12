@@ -1,0 +1,405 @@
+{
+  "schema_version": "anime-noref-clip.story_styles.v1.4.12",
+  "default_style": "style_01_aggressive_youtube_cold_start",
+  "style_anchor_base": "references/story_styles.json#styles/",
+  "styles": {
+    "style_01_aggressive_youtube_cold_start": {
+      "preset_id": "style_01_aggressive_youtube_cold_start",
+      "label": "Aggressive YouTube Cold Start",
+      "aliases": [
+        "preset1",
+        "style1",
+        "cold_start",
+        "aggressive",
+        "youtube_retention",
+        "current_default"
+      ],
+      "use_when": [
+        "YouTube Shorts or similar cold traffic",
+        "the first seconds must create a strong reason to keep watching",
+        "the source has visible conflict, danger, confession, reversal, choice, consequence, or object clues"
+      ],
+      "decision_overlay": {
+        "retention_mode": "aggressive_youtube_cold_start",
+        "hook_strategy": "multi_hook_with_payoff",
+        "nonlinear_teaser_allowed": true,
+        "max_nonlinear_exceptions": 2,
+        "target_duration_sec": 60,
+        "script_density": "high",
+        "shot_energy": "aggressive_but_stable_after_hook",
+        "cold_open_max_sec": 5,
+        "cold_open_allow_nonlinear": true,
+        "post_hook_main_path": "contiguous_source_blocks",
+        "post_hook_min_shot_duration": 1.3,
+        "dialogue_scene_min_shot_duration": 1.6,
+        "target_shot_count_60s": [
+          25,
+          35
+        ],
+        "hook_speed_range": [
+          0.75,
+          1.35
+        ],
+        "post_hook_speed_range": [
+          0.88,
+          1.18
+        ],
+        "absolute_non_hook_speed_range": [
+          0.75,
+          1.25
+        ],
+        "clone_padding_policy": "no_clone_padding_except_final_2_frames",
+        "alignment_solve_order": "shot_count_then_speed",
+        "cold_open_policy": "allowed_if_supported_and_reviewed"
+      },
+      "selection_bias": [
+        "conflict",
+        "danger",
+        "confession",
+        "emotional reversal",
+        "character choice",
+        "visible consequence",
+        "object clue",
+        "strong reaction",
+        "visual salience",
+        "payoff availability"
+      ],
+      "avoid": [
+        "unsupported hype",
+        "invented motive",
+        "generic exposition",
+        "unrelated filler shots",
+        "scattered post-hook single-shot sampling",
+        "OP/ED/preview overlap",
+        "repeated same-framing close-ups without emotional purpose",
+        "post-hook overcutting"
+      ],
+      "script_rules": {
+        "opening": "start with a source-supported conflict, danger, contradiction, confession, or clear question in the first 1-2 seconds",
+        "middle": "add supported micro-hooks every 6-10 seconds and pay off or escalate each within 6-15 seconds",
+        "ending": "end at the strongest retention point; do not require full episode closure",
+        "support": "use only visible action, dialogue, emotion, objects, and transcript/frame-supported relationships"
+      },
+      "shot_mapping_rules": {
+        "cold_open": "may use up to 5 seconds of fast cuts and at most 2 documented nonlinear exceptions",
+        "return_to_main_path": "return to the main source timeline within 6-8 seconds",
+        "body": "use 3-6 contiguous source blocks for a 60-second short",
+        "unit_binding": "bind each script unit to one small source block or adjacent block pair",
+        "replacement": "prefer the nearest later suitable shot in the same story beat",
+        "large_jumps": "allow only at beat or paragraph transitions with recorded reasons"
+      },
+      "creative_qc_profile": {
+        "min_hook_candidates": 8,
+        "unsupported_claims_count": 0,
+        "generic_exposition_lines_max": 1,
+        "first_3s_requires_subject_and_conflict": true,
+        "rehook_interval_max_sec": 10,
+        "cold_open_max_sec": 5,
+        "return_to_main_timeline_max_sec": 8,
+        "selected_shot_count_60s": [
+          25,
+          35
+        ],
+        "post_hook_min_shot_duration_sec": 1.3,
+        "dialogue_scene_min_shot_duration_sec": 1.6,
+        "post_hook_contiguous_source_blocks": true,
+        "unique_shots": true,
+        "op_ed_overlap_count": 0
+      }
+    },
+    "style_02_natural_plot_explanation": {
+      "preset_id": "style_02_natural_plot_explanation",
+      "label": "Natural Plot Explanation",
+      "aliases": [
+        "preset2",
+        "style2",
+        "natural",
+        "plot",
+        "calm_recap",
+        "low_risk"
+      ],
+      "use_when": [
+        "the user asks for a calmer recap, chronological explanation, or lower-risk continuity",
+        "the source is dialogue-heavy or emotionally quiet",
+        "retention should come from clarity and plot causality rather than nonlinear shock"
+      ],
+      "decision_overlay": {
+        "retention_mode": "natural_plot_explanation",
+        "hook_strategy": "single_light_hook",
+        "nonlinear_teaser_allowed": false,
+        "max_nonlinear_exceptions": 0,
+        "target_duration_sec": 60,
+        "script_density": "moderate",
+        "shot_energy": "moderate_continuity_first",
+        "cold_open_max_sec": 4,
+        "cold_open_allow_nonlinear": false,
+        "post_hook_main_path": "contiguous_source_blocks",
+        "post_hook_min_shot_duration": 1.6,
+        "dialogue_scene_min_shot_duration": 1.8,
+        "target_shot_count_60s": [
+          18,
+          28
+        ],
+        "hook_speed_range": [
+          0.85,
+          1.2
+        ],
+        "post_hook_speed_range": [
+          0.9,
+          1.12
+        ],
+        "absolute_non_hook_speed_range": [
+          0.85,
+          1.18
+        ],
+        "clone_padding_policy": "no_clone_padding_except_final_2_frames",
+        "alignment_solve_order": "shot_count_then_speed",
+        "cold_open_policy": "chronological_only_unless_user_approves"
+      },
+      "selection_bias": [
+        "plot causality",
+        "clear dialogue",
+        "character relationship",
+        "reaction",
+        "scene continuity",
+        "readable emotion"
+      ],
+      "avoid": [
+        "unsupported shock hook",
+        "nonlinear spoiler",
+        "overcutting",
+        "ambiguous character motivation",
+        "unrelated filler shots"
+      ],
+      "script_rules": {
+        "opening": "start with a clear source-supported question or situation, not empty sensationalism",
+        "middle": "keep events chronological and explain cause-effect relationships compactly",
+        "ending": "end at a clear emotional or plot turning point",
+        "support": "use only transcript/frame-supported plot relationships"
+      },
+      "shot_mapping_rules": {
+        "cold_open": "chronological source opening or a light same-block hook only",
+        "return_to_main_path": "nonlinear returns should be unnecessary; if present, user approval is required",
+        "body": "use 3-5 contiguous source blocks for a 60-second recap",
+        "unit_binding": "bind each script unit to one source block or adjacent pair",
+        "replacement": "prefer nearest later suitable shot in the same story beat",
+        "large_jumps": "allow only when a new plot beat begins and reason is recorded"
+      },
+      "creative_qc_profile": {
+        "min_hook_candidates": 4,
+        "unsupported_claims_count": 0,
+        "generic_exposition_lines_max": 2,
+        "first_3s_requires_subject_and_conflict": false,
+        "rehook_interval_max_sec": 14,
+        "cold_open_max_sec": 4,
+        "return_to_main_timeline_max_sec": 0,
+        "selected_shot_count_60s": [
+          18,
+          28
+        ],
+        "post_hook_min_shot_duration_sec": 1.6,
+        "dialogue_scene_min_shot_duration_sec": 1.8,
+        "post_hook_contiguous_source_blocks": true,
+        "unique_shots": true,
+        "op_ed_overlap_count": 0
+      }
+    },
+    "style_03_emotional_reversal": {
+      "preset_id": "style_03_emotional_reversal",
+      "label": "Emotional Reversal",
+      "aliases": [
+        "preset3",
+        "style3",
+        "emotional",
+        "romance",
+        "reversal",
+        "relationship"
+      ],
+      "use_when": [
+        "the episode has a clear emotional turn, confession, betrayal, reconciliation, or relationship reveal",
+        "the edit should preserve facial reactions and pauses",
+        "the user wants impact from emotion rather than maximum cuts"
+      ],
+      "decision_overlay": {
+        "retention_mode": "emotional_reversal",
+        "hook_strategy": "emotional_question_with_delayed_payoff",
+        "nonlinear_teaser_allowed": true,
+        "max_nonlinear_exceptions": 1,
+        "target_duration_sec": 60,
+        "script_density": "moderate_high",
+        "shot_energy": "emotion_forward_stable",
+        "cold_open_max_sec": 4,
+        "cold_open_allow_nonlinear": true,
+        "post_hook_main_path": "contiguous_source_blocks",
+        "post_hook_min_shot_duration": 1.5,
+        "dialogue_scene_min_shot_duration": 1.8,
+        "target_shot_count_60s": [
+          20,
+          30
+        ],
+        "hook_speed_range": [
+          0.82,
+          1.25
+        ],
+        "post_hook_speed_range": [
+          0.9,
+          1.14
+        ],
+        "absolute_non_hook_speed_range": [
+          0.82,
+          1.2
+        ],
+        "clone_padding_policy": "no_clone_padding_except_final_2_frames",
+        "alignment_solve_order": "shot_count_then_speed",
+        "cold_open_policy": "one_emotional_teaser_if_supported_and_reviewed"
+      },
+      "selection_bias": [
+        "emotion",
+        "hesitation",
+        "eye contact",
+        "confession",
+        "betrayal",
+        "reaction",
+        "relationship clue",
+        "quiet consequence"
+      ],
+      "avoid": [
+        "overcutting emotional beats",
+        "explaining feelings not supported by source",
+        "generic romance wording",
+        "action inserts without emotional function"
+      ],
+      "script_rules": {
+        "opening": "open with the emotional contradiction or relationship question",
+        "middle": "let reactions breathe and pay off emotional clues within 8-18 seconds",
+        "ending": "end on the strongest emotional reversal or unresolved relationship question",
+        "support": "do not state inner psychology unless dialogue, expression, or action supports it"
+      },
+      "shot_mapping_rules": {
+        "cold_open": "may use one reviewed emotional teaser",
+        "return_to_main_path": "return to the main timeline within 8 seconds when a teaser is used",
+        "body": "use 3-5 contiguous emotional source blocks",
+        "unit_binding": "preserve dialogue-reaction pairs",
+        "replacement": "replace with same-character or same-relationship reaction when possible",
+        "large_jumps": "allow only at emotional beat transitions"
+      },
+      "creative_qc_profile": {
+        "min_hook_candidates": 6,
+        "unsupported_claims_count": 0,
+        "generic_exposition_lines_max": 1,
+        "first_3s_requires_subject_and_conflict": true,
+        "rehook_interval_max_sec": 12,
+        "cold_open_max_sec": 4,
+        "return_to_main_timeline_max_sec": 8,
+        "selected_shot_count_60s": [
+          20,
+          30
+        ],
+        "post_hook_min_shot_duration_sec": 1.5,
+        "dialogue_scene_min_shot_duration_sec": 1.8,
+        "post_hook_contiguous_source_blocks": true,
+        "unique_shots": true,
+        "op_ed_overlap_count": 0
+      }
+    },
+    "style_04_action_battle_escalation": {
+      "preset_id": "style_04_action_battle_escalation",
+      "label": "Action Battle Escalation",
+      "aliases": [
+        "preset4",
+        "style4",
+        "action",
+        "battle",
+        "fight",
+        "escalation"
+      ],
+      "use_when": [
+        "the source has visible action, danger, impact, chase, or battle escalation",
+        "the edit should feel energetic while keeping source support auditable",
+        "motion and consequence are more important than dialogue continuity"
+      ],
+      "decision_overlay": {
+        "retention_mode": "action_battle_escalation",
+        "hook_strategy": "impact_first_with_consequence_payoff",
+        "nonlinear_teaser_allowed": true,
+        "max_nonlinear_exceptions": 2,
+        "target_duration_sec": 60,
+        "script_density": "high",
+        "shot_energy": "high_motion_but_auditable",
+        "cold_open_max_sec": 5,
+        "cold_open_allow_nonlinear": true,
+        "post_hook_main_path": "contiguous_source_blocks",
+        "post_hook_min_shot_duration": 1.1,
+        "dialogue_scene_min_shot_duration": 1.4,
+        "target_shot_count_60s": [
+          28,
+          42
+        ],
+        "hook_speed_range": [
+          0.75,
+          1.35
+        ],
+        "post_hook_speed_range": [
+          0.88,
+          1.18
+        ],
+        "absolute_non_hook_speed_range": [
+          0.75,
+          1.25
+        ],
+        "clone_padding_policy": "no_clone_padding_except_final_2_frames",
+        "alignment_solve_order": "shot_count_then_speed",
+        "cold_open_policy": "impact_teaser_allowed_if_supported_and_reviewed"
+      },
+      "selection_bias": [
+        "motion",
+        "impact",
+        "danger",
+        "visible consequence",
+        "reaction",
+        "weapon/object clue",
+        "chase",
+        "power shift"
+      ],
+      "avoid": [
+        "unreadable overcutting",
+        "random action inserts",
+        "OP/ED action shots",
+        "unsupported battle outcome",
+        "reusing the same impact shot"
+      ],
+      "script_rules": {
+        "opening": "open with visible danger, impact, or consequence",
+        "middle": "escalate action beats and pay off the consequence of each threat",
+        "ending": "end at the strongest impact, reversal, or unresolved danger",
+        "support": "state only action outcomes visible in the source or dialogue-supported"
+      },
+      "shot_mapping_rules": {
+        "cold_open": "may use fast source-supported impact cuts for up to 5 seconds",
+        "return_to_main_path": "return to main source timeline within 8 seconds",
+        "body": "use 3-6 contiguous action blocks, not scattered highlight sampling",
+        "unit_binding": "bind threat, action, impact, and reaction as adjacent source windows",
+        "replacement": "prefer nearest same-action continuation shot",
+        "large_jumps": "allow only between action phases with reason recorded"
+      },
+      "creative_qc_profile": {
+        "min_hook_candidates": 8,
+        "unsupported_claims_count": 0,
+        "generic_exposition_lines_max": 1,
+        "first_3s_requires_subject_and_conflict": true,
+        "rehook_interval_max_sec": 9,
+        "cold_open_max_sec": 5,
+        "return_to_main_timeline_max_sec": 8,
+        "selected_shot_count_60s": [
+          28,
+          42
+        ],
+        "post_hook_min_shot_duration_sec": 1.1,
+        "dialogue_scene_min_shot_duration_sec": 1.4,
+        "post_hook_contiguous_source_blocks": true,
+        "unique_shots": true,
+        "op_ed_overlap_count": 0
+      }
+    }
+  }
+}

@@ -46,6 +46,26 @@ def main() -> int:
     )
     results.append((status, "tools/validate_workflow_state.py"))
 
+    for script_name in ("resolve_story_style.py", "validate_story_styles.py"):
+        script_src = SKILL_ROOT / "scripts" / script_name
+        if script_src.exists():
+            status = copy_file(
+                script_src,
+                project_root / "tools" / script_name,
+                force=args.force,
+            )
+            results.append((status, f"tools/{script_name}"))
+
+    for rel in ("story_styles.json", "story_styles.schema.json"):
+        ref_src = SKILL_ROOT / "references" / rel
+        if ref_src.exists():
+            status = copy_file(
+                ref_src,
+                project_root / "references" / rel,
+                force=args.force,
+            )
+            results.append((status, f"references/{rel}"))
+
     for status, rel in results:
         print(f"{status}\t{rel}")
     return 0

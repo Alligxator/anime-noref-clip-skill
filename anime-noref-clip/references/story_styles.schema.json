@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "anime-noref-clip.story_styles.schema.v1.4.12",
+  "title": "Anime No-Ref Clip Story Style Presets",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "default_style",
+    "style_anchor_base",
+    "styles"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "default_style": {
+      "type": "string"
+    },
+    "style_anchor_base": {
+      "type": "string"
+    },
+    "styles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "preset_id",
+          "label",
+          "aliases",
+          "use_when",
+          "decision_overlay",
+          "selection_bias",
+          "avoid",
+          "script_rules",
+          "shot_mapping_rules",
+          "creative_qc_profile"
+        ],
+        "properties": {
+          "preset_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "use_when": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_overlay": {
+            "type": "object"
+          },
+          "selection_bias": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avoid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "script_rules": {
+            "type": "object"
+          },
+          "shot_mapping_rules": {
+            "type": "object"
+          },
+          "creative_qc_profile": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

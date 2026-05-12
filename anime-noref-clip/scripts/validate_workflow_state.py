@@ -19,10 +19,34 @@ ALLOWED_OUTPUT_ASPECTS = {
     "16:9",
     "both",
 }
-ALLOWED_STORY_STYLES = {
-    "style_01_aggressive_youtube_cold_start",
-}
 STORY_STYLE_01 = "style_01_aggressive_youtube_cold_start"
+STORY_STYLE_CONFIG_SCHEMA_VERSION = "anime-noref-clip.story_styles.v1.4.12"
+STYLE_ANCHOR_BASE = "references/story_styles.json#styles/"
+EMBEDDED_STORY_STYLES = {
+    "default_style": STORY_STYLE_01,
+    "style_anchor_base": STYLE_ANCHOR_BASE,
+    "styles": {
+        STORY_STYLE_01: {
+            "preset_id": STORY_STYLE_01,
+            "label": "Aggressive YouTube Cold Start",
+            "decision_overlay": {
+                "retention_mode": "aggressive_youtube_cold_start",
+                "hook_strategy": "multi_hook_with_payoff",
+            },
+            "creative_qc_profile": {
+                "min_hook_candidates": 8,
+                "unsupported_claims_count": 0,
+                "generic_exposition_lines_max": 1,
+                "rehook_interval_max_sec": 10,
+                "return_to_main_timeline_max_sec": 8,
+                "selected_shot_count_60s": [25, 35],
+                "post_hook_min_shot_duration_sec": 1.3,
+                "dialogue_scene_min_shot_duration_sec": 1.6,
+                "op_ed_overlap_count": 0,
+            },
+        }
+    },
+}
 FIXED_TTS_VOICES = {
     "zh-CN": "zh-CN-YunxiNeural",
     "zh": "zh-CN-YunxiNeural",
@@ -34,6 +58,118 @@ POST_HOOK_MAIN_PATH = "contiguous_source_blocks"
 CLONE_PADDING_POLICY = "no_clone_padding_except_final_2_frames"
 ALIGNMENT_SOLVE_ORDER = "shot_count_then_speed"
 SOURCE_BUFFER_POLICY = "stable_subwindow_only_no_cross_cut_tail_buffer"
+
+
+def load_story_style_config(project_dir: Path) -> dict[str, Any]:
+    candidates = []
+    state_local = project_dir / "references" / "story_styles.json"
+    candidates.append(state_local)
+    script_root = Path(__file__).resolve().parents[1]
+    candidates.append(script_root / "references" / "story_styles.json")
+    for path in candidates:
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                return {"_load_error": f"invalid story style config {path}: {exc}"}
+    return EMBEDDED_STORY_STYLES
+
+
+def story_style_map(project_dir: Path) -> dict[str, dict[str, Any]]:
+    config = load_story_style_config(project_dir)
+    styles = config.get("styles", {})
+    return styles if isinstance(styles, dict) else {}
+
+
+def current_story_style(data: dict[str, Any], project_dir: Path) -> dict[str, Any] | None:
+    style_id = get_value(data, "decisions.story_style")
+    styles = story_style_map(project_dir)
+    style = styles.get(style_id)
+    return style if isinstance(style, dict) else None
+
+
+def current_style_config(data: dict[str, Any], project_dir: Path) -> dict[str, Any]:
+    return load_story_style_config(project_dir)
+
+
+def style_anchor(data: dict[str, Any], project_dir: Path, style_id: str) -> str:
+    config = current_style_config(data, project_dir)
+    return f"{config.get('style_anchor_base', STYLE_ANCHOR_BASE)}{style_id}"
+
+
+def style_override_fields(data: dict[str, Any]) -> set[str]:
+    overrides = get_value(data, "decisions.story_style_overrides") or []
+    fields: set[str] = set()
+    if isinstance(overrides, list):
+        for item in overrides:
+            if isinstance(item, dict) and isinstance(item.get("field"), str):
+                fields.add(item["field"])
+    return fields
+
+
+def style_creative_value(
+    data: dict[str, Any], project_dir: Path, key: str, default: Any
+) -> Any:
+    style = current_story_style(data, project_dir) or {}
+    profile = style.get("creative_qc_profile", {}) if isinstance(style, dict) else {}
+    if isinstance(profile, dict) and key in profile:
+        return profile[key]
+    return default
+
+
+def style_creative_number(
+    data: dict[str, Any], project_dir: Path, key: str, default: float
+) -> float:
+    value = style_creative_value(data, project_dir, key, default)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def style_creative_bool(
+    data: dict[str, Any], project_dir: Path, key: str, default: bool
+) -> bool:
+    return bool(style_creative_value(data, project_dir, key, default))
+
+
+def style_decision_value(
+    data: dict[str, Any], project_dir: Path, key: str, default: Any
+) -> Any:
+    style = current_story_style(data, project_dir) or {}
+    overlay = style.get("decision_overlay", {}) if isinstance(style, dict) else {}
+    if isinstance(overlay, dict) and key in overlay:
+        return overlay[key]
+    return default
+
+
+def scaled_style_shot_range(data: dict[str, Any], project_dir: Path) -> tuple[int, int] | None:
+    style = current_story_style(data, project_dir) or {}
+    profile = style.get("creative_qc_profile", {}) if isinstance(style, dict) else {}
+    base_range = profile.get("selected_shot_count_60s") if isinstance(profile, dict) else None
+    if not (isinstance(base_range, list) and len(base_range) == 2):
+        return None
+    target = get_value(data, "decisions.target_duration_sec") or 60
+    try:
+        scale = max(0.1, float(target) / 60.0)
+        low = max(1, round(float(base_range[0]) * scale))
+        high = max(low, round(float(base_range[1]) * scale))
+        return low, high
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_numeric_pair(value: Any) -> tuple[float, float] | None:
+    if not (isinstance(value, list) and len(value) == 2):
+        return None
+    try:
+        low = float(value[0])
+        high = float(value[1])
+    except (TypeError, ValueError):
+        return None
+    if low > high:
+        return None
+    return low, high
 
 
 def get_value(data: dict[str, Any], dotted_path: str) -> Any:
@@ -199,6 +335,30 @@ def require_equals_dynamic(
         )
 
 
+def require_gte_range_min(
+    failures: list[str],
+    data: dict[str, Any],
+    dotted_path: str,
+    range_path: str,
+    fallback_minimum: float,
+) -> None:
+    numeric_range = parse_numeric_pair(get_value(data, range_path))
+    minimum = numeric_range[0] if numeric_range else fallback_minimum
+    require_gte(failures, data, dotted_path, minimum)
+
+
+def require_lte_range_max(
+    failures: list[str],
+    data: dict[str, Any],
+    dotted_path: str,
+    range_path: str,
+    fallback_maximum: float,
+) -> None:
+    numeric_range = parse_numeric_pair(get_value(data, range_path))
+    maximum = numeric_range[1] if numeric_range else fallback_maximum
+    require_lte(failures, data, dotted_path, maximum)
+
+
 def parse_skill_version(value: Any) -> tuple[int, int, int]:
     if not isinstance(value, str):
         return (0, 0, 0)
@@ -229,6 +389,10 @@ def requires_boundary_group_subtitle_plan(data: dict[str, Any]) -> bool:
 
 def requires_story_style_preset(data: dict[str, Any]) -> bool:
     return parse_skill_version(get_value(data, "skill_version")) >= (1, 4, 11)
+
+
+def requires_machine_story_styles(data: dict[str, Any]) -> bool:
+    return parse_skill_version(get_value(data, "skill_version")) >= (1, 4, 12)
 
 
 def is_vertical_output(data: dict[str, Any]) -> bool:
@@ -304,7 +468,7 @@ def validate_tts(
     *,
     check_exists: bool,
 ) -> None:
-    if get_value(data, "decisions.retention_mode") == RETENTION_MODE_COLD_START:
+    if requires_story_style_preset(data) or get_value(data, "decisions.retention_mode") == RETENTION_MODE_COLD_START:
         validate_creative(failures, data, project_dir, check_exists=check_exists)
     else:
         validate_story(failures, data, project_dir, check_exists=check_exists)
@@ -370,12 +534,24 @@ def validate_pacing(
     require_lte_dynamic(
         failures, data, "checks.selected_shot_count", "checks.target_shot_count_max"
     )
-    require_gte(failures, data, "checks.hook_min_speed_factor", 0.75)
-    require_lte(failures, data, "checks.hook_max_speed_factor", 1.35)
-    require_gte(failures, data, "checks.post_hook_min_speed_factor", 0.88)
-    require_lte(failures, data, "checks.post_hook_max_speed_factor", 1.18)
-    require_gte(failures, data, "checks.min_non_hook_speed_factor", 0.75)
-    require_lte(failures, data, "checks.max_non_hook_speed_factor", 1.25)
+    require_gte_range_min(
+        failures, data, "checks.hook_min_speed_factor", "decisions.hook_speed_range", 0.75
+    )
+    require_lte_range_max(
+        failures, data, "checks.hook_max_speed_factor", "decisions.hook_speed_range", 1.35
+    )
+    require_gte_range_min(
+        failures, data, "checks.post_hook_min_speed_factor", "decisions.post_hook_speed_range", 0.88
+    )
+    require_lte_range_max(
+        failures, data, "checks.post_hook_max_speed_factor", "decisions.post_hook_speed_range", 1.18
+    )
+    require_gte_range_min(
+        failures, data, "checks.min_non_hook_speed_factor", "decisions.absolute_non_hook_speed_range", 0.75
+    )
+    require_lte_range_max(
+        failures, data, "checks.max_non_hook_speed_factor", "decisions.absolute_non_hook_speed_range", 1.25
+    )
     if is_english_output(data):
         require_true(failures, data, "checks.english_word_budget_passed")
         require_gte_dynamic(
@@ -425,26 +601,45 @@ def validate_story(
     require_true(failures, data, "checks.black_fade_metadata")
 
 
-def validate_story_style(failures: list[str], data: dict[str, Any]) -> None:
+def validate_story_style(failures: list[str], data: dict[str, Any], project_dir: Path) -> None:
     if not requires_story_style_preset(data):
         return
-    require_in(failures, data, "decisions.story_style", ALLOWED_STORY_STYLES)
-    require_nonempty(failures, data, "decisions.story_style_preset")
-    require_nonempty(failures, data, "decisions.story_style_label")
+    config = current_style_config(data, project_dir)
+    if config.get("_load_error"):
+        failures.append(config["_load_error"])
+        return
+    styles = story_style_map(project_dir)
+    style_id = get_value(data, "decisions.story_style")
+    if style_id not in styles:
+        failures.append(
+            f"decisions.story_style must be one of {sorted(styles)}, got {style_id!r}"
+        )
+        return
+    style = styles[style_id]
+    require_equals(failures, data, "decisions.story_style_preset", style_anchor(data, project_dir, style_id))
+    require_equals(failures, data, "decisions.story_style_label", style.get("label", style_id))
     require_true(failures, data, "checks.story_style_preset_resolved")
-    if get_value(data, "decisions.story_style") == STORY_STYLE_01:
+    if requires_machine_story_styles(data):
         require_equals(
-            failures,
-            data,
-            "decisions.retention_mode",
-            RETENTION_MODE_COLD_START,
+            failures, data, "decisions.story_style_config", "references/story_styles.json"
         )
         require_equals(
-            failures,
-            data,
-            "decisions.hook_strategy",
-            "multi_hook_with_payoff",
+            failures, data, "artifacts.story_styles_config", "references/story_styles.json"
         )
+
+    overrides = style_override_fields(data)
+    overlay = style.get("decision_overlay", {})
+    if isinstance(overlay, dict):
+        for key, expected in overlay.items():
+            if key in overrides:
+                continue
+            require_equals(failures, data, f"decisions.{key}", expected)
+
+    shot_range = scaled_style_shot_range(data, project_dir)
+    if shot_range:
+        minimum, maximum = shot_range
+        require_equals(failures, data, "checks.target_shot_count_min", minimum)
+        require_equals(failures, data, "checks.target_shot_count_max", maximum)
 
 
 def validate_creative(
@@ -455,7 +650,7 @@ def validate_creative(
     check_exists: bool,
 ) -> None:
     validate_story(failures, data, project_dir, check_exists=check_exists)
-    validate_story_style(failures, data)
+    validate_story_style(failures, data, project_dir)
     require_artifact(
         failures, data, project_dir, "story_atoms", check_exists=check_exists
     )
@@ -465,7 +660,7 @@ def validate_creative(
     require_artifact(
         failures, data, project_dir, "hook_candidates", check_exists=check_exists
     )
-    require_gte(failures, data, "checks.hook_candidates_count", 8)
+    require_gte(failures, data, "checks.hook_candidates_count", style_creative_number(data, project_dir, "min_hook_candidates", 8))
     require_true(failures, data, "checks.chosen_hook_supported")
     require_artifact(
         failures, data, project_dir, "retention_shot_pool", check_exists=check_exists
@@ -487,16 +682,21 @@ def validate_creative(
         failures, data, project_dir, "retention_qc", check_exists=check_exists
     )
     require_true(failures, data, "checks.creative_retention_qc_passed")
-    require_equals(failures, data, "checks.unsupported_claims_count", 0)
-    require_lte(failures, data, "checks.generic_exposition_lines", 1)
-    require_true(failures, data, "checks.first_3s_visual_salience_passed")
-    require_lte(failures, data, "checks.rehook_interval_max_sec", 10)
+    require_equals(failures, data, "checks.unsupported_claims_count", int(style_creative_number(data, project_dir, "unsupported_claims_count", 0)))
+    require_lte(failures, data, "checks.generic_exposition_lines", style_creative_number(data, project_dir, "generic_exposition_lines_max", 1))
+    if style_creative_bool(data, project_dir, "first_3s_requires_subject_and_conflict", True):
+        require_true(failures, data, "checks.first_3s_visual_salience_passed")
+    require_lte(failures, data, "checks.rehook_interval_max_sec", style_creative_number(data, project_dir, "rehook_interval_max_sec", 10))
     require_lte_dynamic(
         failures, data, "checks.cold_open_duration_sec", "decisions.cold_open_max_sec"
     )
-    require_lte(failures, data, "checks.returns_to_main_timeline_sec", 8)
+    if get_value(data, "decisions.nonlinear_teaser_allowed") is True or float(get_value(data, "checks.nonlinear_exceptions_count") or 0) > 0:
+        require_lte(failures, data, "checks.returns_to_main_timeline_sec", style_creative_number(data, project_dir, "return_to_main_timeline_max_sec", 8))
     require_equals(
-        failures, data, "decisions.post_hook_main_path", POST_HOOK_MAIN_PATH
+        failures,
+        data,
+        "decisions.post_hook_main_path",
+        style_decision_value(data, project_dir, "post_hook_main_path", POST_HOOK_MAIN_PATH),
     )
     require_gte_dynamic(
         failures,
@@ -516,7 +716,8 @@ def validate_creative(
     require_lte_dynamic(
         failures, data, "checks.selected_shot_count", "checks.target_shot_count_max"
     )
-    require_true(failures, data, "checks.post_hook_contiguous_source_blocks")
+    if style_creative_bool(data, project_dir, "post_hook_contiguous_source_blocks", True):
+        require_true(failures, data, "checks.post_hook_contiguous_source_blocks")
     require_true(failures, data, "checks.script_units_bound_to_blocks")
     require_true(failures, data, "checks.large_jumps_only_at_beat_boundaries")
     require_true(failures, data, "checks.large_jump_reasons_recorded")
@@ -530,9 +731,17 @@ def validate_creative(
     )
     if get_value(data, "decisions.nonlinear_teaser_allowed") is True:
         require_true(failures, data, "checks.nonlinear_exceptions_reviewed")
+    else:
+        require_equals(failures, data, "checks.nonlinear_exceptions_count", 0)
     require_true(failures, data, "checks.monotonic_main_path")
-    require_equals(failures, data, "checks.op_ed_overlap_count", 0)
-    require_true(failures, data, "checks.unique_shots")
+    require_equals(
+        failures,
+        data,
+        "checks.op_ed_overlap_count",
+        int(style_creative_number(data, project_dir, "op_ed_overlap_count", 0)),
+    )
+    if style_creative_bool(data, project_dir, "unique_shots", True):
+        require_true(failures, data, "checks.unique_shots")
 
 
 def validate_compose(
@@ -621,18 +830,36 @@ def validate_compose(
     require_equals(failures, data, "checks.subtitle_bad_line_break_count", 0)
     require_true(failures, data, "checks.multilingual_timing_isolated")
     require_equals(
-        failures, data, "decisions.clone_padding_policy", CLONE_PADDING_POLICY
+        failures,
+        data,
+        "decisions.clone_padding_policy",
+        style_decision_value(data, project_dir, "clone_padding_policy", CLONE_PADDING_POLICY),
     )
     require_equals(
-        failures, data, "decisions.alignment_solve_order", ALIGNMENT_SOLVE_ORDER
+        failures,
+        data,
+        "decisions.alignment_solve_order",
+        style_decision_value(data, project_dir, "alignment_solve_order", ALIGNMENT_SOLVE_ORDER),
     )
     require_true(failures, data, "checks.alignment_solves_shot_count_before_speed")
-    require_gte(failures, data, "checks.hook_min_speed_factor", 0.75)
-    require_lte(failures, data, "checks.hook_max_speed_factor", 1.35)
-    require_gte(failures, data, "checks.post_hook_min_speed_factor", 0.88)
-    require_lte(failures, data, "checks.post_hook_max_speed_factor", 1.18)
-    require_gte(failures, data, "checks.min_non_hook_speed_factor", 0.75)
-    require_lte(failures, data, "checks.max_non_hook_speed_factor", 1.25)
+    require_gte_range_min(
+        failures, data, "checks.hook_min_speed_factor", "decisions.hook_speed_range", 0.75
+    )
+    require_lte_range_max(
+        failures, data, "checks.hook_max_speed_factor", "decisions.hook_speed_range", 1.35
+    )
+    require_gte_range_min(
+        failures, data, "checks.post_hook_min_speed_factor", "decisions.post_hook_speed_range", 0.88
+    )
+    require_lte_range_max(
+        failures, data, "checks.post_hook_max_speed_factor", "decisions.post_hook_speed_range", 1.18
+    )
+    require_gte_range_min(
+        failures, data, "checks.min_non_hook_speed_factor", "decisions.absolute_non_hook_speed_range", 0.75
+    )
+    require_lte_range_max(
+        failures, data, "checks.max_non_hook_speed_factor", "decisions.absolute_non_hook_speed_range", 1.25
+    )
     require_lte(failures, data, "checks.tpad_clone_total_frames", 2)
     require_true(failures, data, "checks.clone_padding_used_only_final_fallback")
     require_true(failures, data, "checks.black_fade_metadata")
@@ -739,7 +966,7 @@ def main() -> int:
     parser.add_argument("state", type=Path, help="Path to workflow_state.json")
     parser.add_argument(
         "--gate",
-        choices=("cut", "story", "creative", "tts", "pacing", "compose", "deliver"),
+        choices=("cut", "story", "style", "creative", "tts", "pacing", "compose", "deliver"),
         default="compose",
         help="Workflow gate to validate.",
     )
@@ -772,6 +999,9 @@ def main() -> int:
         validate_cut(failures, data)
     elif args.gate == "story":
         validate_story(failures, data, project_dir, check_exists=check_exists)
+    elif args.gate == "style":
+        validate_story(failures, data, project_dir, check_exists=check_exists)
+        validate_story_style(failures, data, project_dir)
     elif args.gate == "creative":
         validate_creative(failures, data, project_dir, check_exists=check_exists)
     elif args.gate == "tts":

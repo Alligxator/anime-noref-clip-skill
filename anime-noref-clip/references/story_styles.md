@@ -1,10 +1,24 @@
 # Story Style Presets
 
-This file is canonical for story-style preset definitions. A story style controls
+This file is the human-readable guide for story-style presets. The machine-readable canonical source is `story_styles.json`. A story style controls
 script shape, hook strategy, shot-selection bias, source-block mapping, pacing
 defaults, and creative QC profile. It does not override hard production gates:
 source support, GPT visual tagging, no invented plot, full-script TTS, real TTS
 subtitle timing, frame-quantized alignment, layout QA, and delivery QA still apply.
+
+## v1.4.12 Machine-Readable Config
+
+`story_styles.json` is the canonical preset source. Keep this Markdown file aligned with that JSON, or regenerate it from the JSON when adding styles. Validate changes with:
+
+```bash
+python3 scripts/validate_story_styles.py
+```
+
+Resolve a style alias and optionally patch workflow state with:
+
+```bash
+python3 scripts/resolve_story_style.py --style aggressive --project-root <project> --write
+```
 
 ## How To Use
 
@@ -12,7 +26,7 @@ Resolve `decisions.story_style` before building `retention_brief.json`,
 `hook_candidates.json`, `retention_shot_pool.json`, `script_variants.json`, or
 `final_shots.json`.
 
-If the user names a style, map the name or alias to a `preset_id`. If the user
+Resolve style ids and aliases from `story_styles.json`; `scripts/resolve_story_style.py` can write the resolved overlay into `workflow_state.json`. If the user
 does not specify a style, use `style_01_aggressive_youtube_cold_start`.
 
 Record the resolved preset in `workflow_state.json`:
@@ -21,7 +35,7 @@ Record the resolved preset in `workflow_state.json`:
 {
   "decisions": {
     "story_style": "style_01_aggressive_youtube_cold_start",
-    "story_style_preset": "references/story_styles.md#style_01_aggressive_youtube_cold_start",
+    "story_style_preset": "references/story_styles.json#styles/style_01_aggressive_youtube_cold_start",
     "story_style_label": "Aggressive YouTube Cold Start"
   },
   "checks": {
@@ -49,6 +63,15 @@ Each preset should define:
 - `script_rules`: narration rules
 - `shot_mapping_rules`: shot/block mapping rules
 - `creative_qc_profile`: style-specific QC thresholds and checks
+
+## Preset Index
+
+Full machine-readable definitions live in `story_styles.json`.
+
+- `style_01_aggressive_youtube_cold_start` / Aggressive YouTube Cold Start: default v1.4.11 behavior for cold-traffic Shorts, multi-hook retention, limited reviewed nonlinear teaser use, and 25-35 shots per 60 seconds.
+- `style_02_natural_plot_explanation` / Natural Plot Explanation: calmer chronological recap, continuity-first shot selection, no nonlinear teaser by default, and 18-28 shots per 60 seconds.
+- `style_03_emotional_reversal` / Emotional Reversal: relationship or emotion-led edit, preserves reaction pauses, allows one reviewed emotional teaser, and targets 20-30 shots per 60 seconds.
+- `style_04_action_battle_escalation` / Action Battle Escalation: motion/impact-led battle or danger edit, allows reviewed impact teasers, and targets 28-42 shots per 60 seconds.
 
 ## style_01_aggressive_youtube_cold_start
 

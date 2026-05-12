@@ -7,7 +7,7 @@ description: Create or continue a no-reference anime short-video editing pipelin
 
 ## Version
 
-- Version: `v1.4.11`
+- Version: `v1.4.12`
 - Base purpose: turn source anime footage into a no-reference short-video edit by using AssemblyAI transcription with speaker diarization plus mandatory GPT subagent visual tags, extracting source-supported story atoms, building a retention brief, generating supported hook candidates, scoring shots for retention value, writing a high-retention plot narration, selecting aggressive but auditable shots, generating full-script TTS, strictly aligning each narration line to shots, and producing QA-ready output.
 - v1.1.0 update: replace local Whisper large-v3 as the default transcription step with AssemblyAI audio transcription plus speaker diarization.
 - v1.2.0 update: use `gpt-5.5` subagents with `reasoning_effort: low` as the default visual tagging model; escalate selected difficult sheets to `medium`.
@@ -31,14 +31,15 @@ description: Create or continue a no-reference anime short-video editing pipelin
 - v1.4.8 update: make subtitle cue planning a subagent step. A Codex subagent produces `subtitles/semantic_cue_plan.json` with language-aware display chunks; the alignment script attaches those chunks to real TTS boundaries. Local rule splitting is diagnostic fallback only for production v1.4.8 projects.
 - v1.4.9 update: replace text-chunk subtitle matching with a three-stage boundary workflow. First build `subtitles/tts_boundary_table.json` from real TTS `WordBoundary`, then have a Codex subagent group contiguous `boundary_start/boundary_end` ranges in `subtitles/semantic_cue_plan.json`, then let the alignment script validate coverage and use exact boundary times.
 - v1.4.10 update: remove drift between docs, validator, and template scripts. Hook candidate production and creative gates now require at least 8 hooks, cold-start `shot_energy` defaults are unified, `workflow_state` examples use the current version, template TTS writes `tts/narration_full.wav`, and `references/workflow.md` is the canonical source for detailed table rows, schemas, gate thresholds, and state fields.
-- v1.4.11 update: introduce story-style presets. The current aggressive YouTube cold-start behavior is now `style_01_aggressive_youtube_cold_start` in `references/story_styles.md`; future styles should be added there, resolved before retention artifacts, recorded in `workflow_state.json`, and validated for v1.4.11+ states.
+- v1.4.11 update: introduce story-style presets. The current aggressive YouTube cold-start behavior became `style_01_aggressive_youtube_cold_start` in the initial Markdown-backed preset guide.
+- v1.4.12 update: make story-style presets machine-loadable and scalable. `references/story_styles.json` is now canonical for preset definitions, `references/story_styles.md` is the human guide, `scripts/resolve_story_style.py` resolves aliases and records overrides, `scripts/validate_story_styles.py` validates preset coverage, and the workflow validator loads preset thresholds instead of hardcoding a single style.
 - Project tooling update: new projects must initialize local tools from this skill's `templates/project` framework via `scripts/init_project_scripts.py`. The template includes the generic post-TTS alignment builder. Do not copy `tools/` from older episode projects except as a deliberate, reviewed one-off migration.
 
 ## Source Of Truth
 
 - `SKILL.md` is the activation and non-negotiable workflow summary: load it first, then load `references/workflow.md` for detailed rows, schemas, thresholds, and state fields.
 - `references/workflow.md` is canonical for the 22-row execution table, artifact schemas, `workflow_state.json` shape, and gate thresholds. Do not maintain an independent detailed table or threshold list elsewhere.
-- `references/story_styles.md` is canonical for story-style preset definitions. Resolve a preset before retention brief, hook candidates, shot pool, script variants, or shot mapping.
+- `references/story_styles.json` is canonical for story-style preset definitions; `references/story_styles.md` is the human-readable guide. Resolve a preset before retention brief, hook candidates, shot pool, script variants, or shot mapping.
 - `references/subtitle_semantic_cue_plan.md` is canonical for the subtitle boundary-group subagent output schema.
 - `scripts/validate_workflow_state.py` is the machine-checkable gate implementation. When a rule changes, keep `references/workflow.md`, the validator, and template script outputs aligned in the same revision.
 
@@ -82,13 +83,21 @@ The script must be based only on visible action, dialogue, character emotion, ob
 
 ## Story Style Presets
 
-Before retention artifacts or scripts, resolve the story style from `references/story_styles.md`. If the user names a style or alias, use that preset. If no style is specified, use `style_01_aggressive_youtube_cold_start`, which preserves the previous default behavior:
+Before retention artifacts or scripts, resolve the story style from `references/story_styles.json`. If the user names a style or alias, use that preset. If no style is specified, use `style_01_aggressive_youtube_cold_start`, which preserves the previous default behavior. Use `scripts/resolve_story_style.py` when a project state file should be patched.
+
+Bundled presets:
+
+- `style_01_aggressive_youtube_cold_start`: default aggressive cold-start Shorts structure.
+- `style_02_natural_plot_explanation`: calmer chronological plot explanation.
+- `style_03_emotional_reversal`: reaction/emotion-led relationship or reversal structure.
+- `style_04_action_battle_escalation`: motion/impact-led battle escalation structure.
 
 ```json
 {
   "story_style": "style_01_aggressive_youtube_cold_start",
-  "story_style_preset": "references/story_styles.md#style_01_aggressive_youtube_cold_start",
+  "story_style_preset": "references/story_styles.json#styles/style_01_aggressive_youtube_cold_start",
   "story_style_label": "Aggressive YouTube Cold Start",
+  "story_style_config": "references/story_styles.json",
   "retention_mode": "aggressive_youtube_cold_start",
   "hook_strategy": "multi_hook_with_payoff",
   "nonlinear_teaser_allowed": true,
@@ -102,11 +111,16 @@ Before retention artifacts or scripts, resolve the story style from `references/
   "post_hook_min_shot_duration": 1.3,
   "dialogue_scene_min_shot_duration": 1.6,
   "target_shot_count_60s": [25, 35],
+  "hook_speed_range": [0.75, 1.35],
+  "post_hook_speed_range": [0.88, 1.18],
+  "absolute_non_hook_speed_range": [0.75, 1.25],
+  "clone_padding_policy": "no_clone_padding_except_final_2_frames",
+  "alignment_solve_order": "shot_count_then_speed",
   "cold_open_policy": "allowed_if_supported_and_reviewed"
 }
 ```
 
-For `style_01_aggressive_youtube_cold_start`, every hook must have source support and a payoff or clarification within 6-15 seconds. A hook is valid only if grounded in visible danger, contradiction, dialogue confession, emotional reversal, character choice, object clue, identity mismatch, consequence shown on screen, or a source-supported future outcome used as a reviewed teaser. Add future styles only in `references/story_styles.md`, then update workflow state validation if a new preset needs machine checks.
+For `style_01_aggressive_youtube_cold_start`, every hook must have source support and a payoff or clarification within 6-15 seconds. A hook is valid only if grounded in visible danger, contradiction, dialogue confession, emotional reversal, character choice, object clue, identity mismatch, consequence shown on screen, or a source-supported future outcome used as a reviewed teaser. Add future styles in `references/story_styles.json`, validate them with `scripts/validate_story_styles.py`, and keep `references/story_styles.md` as the human guide.
 
 ## Execution Plan Table
 
@@ -141,8 +155,8 @@ When this skill triggers:
 4. Publish the execution plan table.
 5. Report current phase, completed gates, blocked gates, and next required user decision in or directly below the table.
 6. Execute only the next eligible table row and update `workflow_state.json` after every major phase or user approval.
-7. Before story/script generation, confirm that visual tagging and the story gate passed.
-8. Before script-to-shot review, produce `retention_qc.json` and pass the creative gate in cold-start mode.
+7. Before retention artifacts or story/script generation, confirm that visual tagging passed, resolve the story style, and run the `style` gate when a project state file exists.
+8. Before script-to-shot review, produce `retention_qc.json` and pass the creative gate for the resolved style.
 9. Before TTS, compose, or delivery, run `scripts/validate_workflow_state.py` for the relevant gate when a project state file exists.
 
 If the validator fails, fix upstream state or ask for the missing decision before continuing.
@@ -150,13 +164,13 @@ If the validator fails, fix upstream state or ask for the missing decision befor
 ## Required Decisions
 
 - Before initial shot selection, ask whether the cut should be `rough` or `detailed` unless already specified. If missing, pause after source discovery, `ffprobe`, subtitle checks, and `workflow_state.json` setup.
-- Resolve `decisions.story_style` from `references/story_styles.md` before retention artifacts. If unspecified, default to `style_01_aggressive_youtube_cold_start` and record `decisions.story_style`, `decisions.story_style_preset`, `decisions.story_style_label`, and `checks.story_style_preset_resolved=true`.
-- For YouTube cold-start work, `style_01_aggressive_youtube_cold_start` maps to `retention_mode=aggressive_youtube_cold_start` and the existing aggressive cold-start defaults unless the user explicitly chooses a different preset.
-- If cold-start mode uses nonlinear shots, document every exception in `nonlinear_exceptions.json`, include it in review, and keep exceptions within `decisions.max_nonlinear_exceptions`.
-- Cold open may use 0.6-1.0s fast cuts for the first 3-5 seconds, but it must return to the main timeline within 6-8 seconds.
-- After the hook, select contiguous source blocks instead of scattered high-energy shots. Prefer 3-6 continuous story blocks for the body of a 60-second short, with each script unit bound to a small block.
-- For a 60-second short, target about 25-35 selected shots. Prefer fewer, longer, emotionally legible shots over many fast shots.
-- Post-hook shots should be at least `1.3s`; dialogue, confession, and emotional shots should usually be `1.6-2.8s`.
+- Resolve `decisions.story_style` from `references/story_styles.json` before retention artifacts. If unspecified, default to `style_01_aggressive_youtube_cold_start` and record `decisions.story_style`, `decisions.story_style_preset`, `decisions.story_style_label`, `decisions.story_style_config`, `artifacts.story_styles_config`, `checks.story_style_preset_resolved=true`, and scaled `checks.target_shot_count_min/max`.
+- The resolved preset's `decision_overlay` controls retention mode, hook strategy, nonlinear teaser allowance, target duration, shot-count range, post-hook duration floor, speed ranges, clone-padding policy, and alignment solve order.
+- If the resolved style uses nonlinear shots, document every exception in `nonlinear_exceptions.json`, include it in review, and keep exceptions within `decisions.max_nonlinear_exceptions`.
+- For the default cold-start style, cold open may use 0.6-1.0s fast cuts for the first 3-5 seconds, but it must return to the main timeline within 6-8 seconds.
+- After the hook, select contiguous source blocks instead of scattered high-energy shots unless the resolved preset explicitly changes that policy.
+- For a 60-second short, use the preset's target shot-count range. Prefer fewer, longer, emotionally legible shots over many fast shots when the preset does not require action density.
+- Post-hook and dialogue-scene duration floors come from the resolved preset.
 - Before final composition, ask whether to output `vertical 9:16`, `horizontal 16:9`, or both unless already specified.
 - Use fixed TTS voices by target language unless the user explicitly changes the defaults: `zh-CN -> zh-CN-YunxiNeural`, `th-TH -> th-TH-PremwadeeNeural`.
 - TTS must be generated once as a single full-script file. Do not generate or retain `unit_*.mp3`, `unit_*.wav`, or `concat_units.txt` for the main render.
@@ -195,7 +209,7 @@ If the validator fails, fix upstream state or ask for the missing decision befor
 
 4. **Build retention artifacts**
    - Extract compact `story_atoms.json` from fused dialogue and visual tags before writing narration.
-   - Resolve the story style preset from `references/story_styles.md` and record it in `workflow_state.json` before retention brief, hook candidates, shot pool, script variants, or shot mapping.
+   - Resolve the story style preset from `references/story_styles.json` and record it in `workflow_state.json` before retention brief, hook candidates, shot pool, script variants, or shot mapping.
    - Build `retention_brief.json` with the resolved preset, main viewer question, first 2-second hook, first 10-second question, midpoint payoff, strongest ending point, skipped source material, allowed operations, and forbidden operations.
    - Generate at least 8 supported `hook_candidates.json` entries and choose one based on support, visual salience, mystery/conflict, and payoff availability.
    - Score `retention_shot_pool.json` for visual salience, emotion, motion, mystery, conflict, reaction, object clues, continuity cost, repetition risk, block membership, spoiler level, and risk flags.
@@ -324,7 +338,7 @@ For a proper v1.4.9 handoff, produce or update:
 
 ## References
 
-For detailed artifact schemas, prompt essentials, workflow state fields, and gate rules, read `references/workflow.md`. For story-style presets, read `references/story_styles.md`. For the subtitle subagent JSON schema and prompt constraints, read `references/subtitle_semantic_cue_plan.md`.
+For detailed artifact schemas, prompt essentials, workflow state fields, and gate rules, read `references/workflow.md`. For machine-loadable story-style presets, read `references/story_styles.json`; for the human guide, read `references/story_styles.md`. For the subtitle subagent JSON schema and prompt constraints, read `references/subtitle_semantic_cue_plan.md`.
 
 ## Project Script Framework
 
