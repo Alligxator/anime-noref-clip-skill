@@ -56,6 +56,19 @@ REQUIRED_QC_KEYS = {
     "unique_shots",
     "op_ed_overlap_count",
 }
+REQUIRED_SCRIPT_RULE_KEYS = {
+    "opening",
+    "middle",
+    "ending",
+    "support",
+}
+REQUIRED_SHOT_MAPPING_RULE_KEYS = {
+    "cold_open",
+    "body",
+    "unit_binding",
+    "replacement",
+    "large_jumps",
+}
 
 
 STRING_OVERLAY_KEYS = {
@@ -159,9 +172,9 @@ def validate_range(value: Any, failures: list[str], where: str) -> None:
 def validate(config: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     require(
-        config.get("schema_version") == "anime-noref-clip.story_styles.v1.4.12",
+        config.get("schema_version") == "anime-noref-clip.story_styles.v1.4.14",
         failures,
-        "schema_version must be anime-noref-clip.story_styles.v1.4.12",
+        "schema_version must be anime-noref-clip.story_styles.v1.4.14",
     )
     require(
         isinstance(config.get("style_anchor_base"), str) and bool(config.get("style_anchor_base")),
@@ -186,6 +199,22 @@ def validate(config: dict[str, Any]) -> list[str]:
         require(not missing, failures, f"{where} missing keys: {sorted(missing)}")
         require(style.get("preset_id") == style_id, failures, f"{where}.preset_id must equal object key")
         require(bool(style.get("label")), failures, f"{where}.label must be non-empty")
+
+        script_rules = style.get("script_rules", {})
+        require(isinstance(script_rules, dict), failures, f"{where}.script_rules must be object")
+        if isinstance(script_rules, dict):
+            missing_script_rules = REQUIRED_SCRIPT_RULE_KEYS - set(script_rules)
+            require(not missing_script_rules, failures, f"{where}.script_rules missing keys: {sorted(missing_script_rules)}")
+            for key in REQUIRED_SCRIPT_RULE_KEYS:
+                validate_string(script_rules.get(key), failures, f"{where}.script_rules.{key}")
+
+        shot_mapping_rules = style.get("shot_mapping_rules", {})
+        require(isinstance(shot_mapping_rules, dict), failures, f"{where}.shot_mapping_rules must be object")
+        if isinstance(shot_mapping_rules, dict):
+            missing_shot_mapping_rules = REQUIRED_SHOT_MAPPING_RULE_KEYS - set(shot_mapping_rules)
+            require(not missing_shot_mapping_rules, failures, f"{where}.shot_mapping_rules missing keys: {sorted(missing_shot_mapping_rules)}")
+            for key in REQUIRED_SHOT_MAPPING_RULE_KEYS:
+                validate_string(shot_mapping_rules.get(key), failures, f"{where}.shot_mapping_rules.{key}")
 
         style_aliases = style.get("aliases", [])
         require(isinstance(style_aliases, list), failures, f"{where}.aliases must be list")

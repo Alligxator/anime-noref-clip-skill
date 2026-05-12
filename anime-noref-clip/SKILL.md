@@ -7,8 +7,8 @@ description: Create or continue a no-reference anime short-video editing pipelin
 
 ## Version
 
-- Version: `v1.4.13`
-- Base purpose: turn source anime footage into a no-reference short-video edit by using AssemblyAI transcription with speaker diarization plus mandatory GPT subagent visual tags, extracting source-supported story atoms, building a retention brief, generating supported hook candidates, scoring shots for retention value, writing a high-retention plot narration, selecting aggressive but auditable shots, generating full-script TTS, strictly aligning each narration line to shots, and producing QA-ready output.
+- Version: `v1.4.14`
+- Base purpose: turn source anime footage into a no-reference short-video edit by using AssemblyAI transcription with speaker diarization plus mandatory GPT subagent visual tags, extracting source-supported story atoms, building a retention brief, generating supported hook candidates, scoring shots for retention value, writing a high-retention plot narration, selecting style-appropriate but auditable shots, generating full-script TTS, strictly aligning each narration line to shots, and producing QA-ready output.
 - v1.1.0 update: replace local Whisper large-v3 as the default transcription step with AssemblyAI audio transcription plus speaker diarization.
 - v1.2.0 update: use `gpt-5.5` subagents with `reasoning_effort: low` as the default visual tagging model; escalate selected difficult sheets to `medium`.
 - v1.3.0 update: require cut granularity before shot selection, ask output aspect before composing, default to full-script TTS, strip trailing subtitle punctuation, filter black/fade frames, and standardize BGM, watermark, concat-path, and QA checks.
@@ -34,6 +34,7 @@ description: Create or continue a no-reference anime short-video editing pipelin
 - v1.4.11 update: introduce story-style presets. The current aggressive YouTube cold-start behavior became `style_01_aggressive_youtube_cold_start` in the initial Markdown-backed preset guide.
 - v1.4.12 update: make story-style presets machine-loadable and scalable. `references/story_styles.json` is now canonical for preset definitions, `references/story_styles.md` is the human guide, `scripts/resolve_story_style.py` resolves aliases and records overrides, `scripts/validate_story_styles.py` validates preset coverage, and the workflow validator loads preset thresholds instead of hardcoding a single style.
 - v1.4.13 update: converge current instructions around resolved story-style presets. Hook counts, script variants, creative QC thresholds, shot-count ranges, and speed ranges now come from the resolved preset unless a hard production gate overrides them; `references/workflow_defaults.json` stores non-style production defaults such as source buffer policy.
+- v1.4.14 update: tighten story-style schema readability and preset shape validation. Story style config now uses schema version `anime-noref-clip.story_styles.v1.4.14`, script and shot-mapping subrules have required non-empty fields, the smoke test is versioned as v1.4.14, and GitHub Actions runs the smoke and preset resolver checks on push and pull request.
 - Project tooling update: new projects must initialize local tools from this skill's `templates/project` framework via `scripts/init_project_scripts.py`. The template includes the generic post-TTS alignment builder. Do not copy `tools/` from older episode projects except as a deliberate, reviewed one-off migration.
 
 ## Source Of Truth
@@ -299,7 +300,7 @@ If the validator fails, fix upstream state or ask for the missing decision befor
 
 ## Required Outputs
 
-For a current v1.4.13+ handoff, produce or update:
+For a current v1.4.14+ handoff, produce or update:
 
 - `workflow_state.json`
 - project-local tools and reference configs initialized from the skill template, not copied from an older episode project

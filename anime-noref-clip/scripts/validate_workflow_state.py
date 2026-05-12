@@ -20,7 +20,7 @@ ALLOWED_OUTPUT_ASPECTS = {
     "both",
 }
 STORY_STYLE_01 = "style_01_aggressive_youtube_cold_start"
-STORY_STYLE_CONFIG_SCHEMA_VERSION = "anime-noref-clip.story_styles.v1.4.12"
+STORY_STYLE_CONFIG_SCHEMA_VERSION = "anime-noref-clip.story_styles.v1.4.14"
 STYLE_ANCHOR_BASE = "references/story_styles.json#styles/"
 EMBEDDED_STORY_STYLES = {
     "default_style": STORY_STYLE_01,

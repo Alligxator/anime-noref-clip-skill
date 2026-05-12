@@ -6,9 +6,11 @@ defaults, and creative QC profile. It does not override hard production gates:
 source support, GPT visual tagging, no invented plot, full-script TTS, real TTS
 subtitle timing, frame-quantized alignment, layout QA, and delivery QA still apply.
 
-## v1.4.12+ Machine-Readable Config
+## v1.4.14 Machine-Readable Config
 
 `story_styles.json` is the canonical preset source. Keep this Markdown file aligned with that JSON, or regenerate it from the JSON when adding styles. Validate changes with:
+
+The current schema version is `anime-noref-clip.story_styles.v1.4.14`. v1.4.14 keeps the four existing preset intents unchanged, but upgrades schema readability and requires each preset to provide non-empty `script_rules` and `shot_mapping_rules` subfields.
 
 ```bash
 python3 scripts/validate_story_styles.py

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke tests for the v1.4.13 story-style drift cleanup."""
+"""Smoke tests for the v1.4.14 story-style schema and CI cleanup."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ def main() -> int:
     if natural["story_style"] != "style_02_natural_plot_explanation":
         raise AssertionError("natural alias did not resolve to style_02_natural_plot_explanation")
 
-    with tempfile.TemporaryDirectory(prefix="anime_noref_v1413_state_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="anime_noref_v1414_state_") as tmp:
         root = Path(tmp)
         state_path = root / "workflow_state.json"
         write_json(state_path, minimal_story_state())
@@ -87,7 +87,7 @@ def main() -> int:
         decisions = state["decisions"]
         artifacts = state["artifacts"]
         checks = state["checks"]
-        assert state["skill_version"] == "v1.4.13"
+        assert state["skill_version"] == "v1.4.14"
         assert decisions["story_style"] == "style_02_natural_plot_explanation"
         assert decisions["story_style_config"] == "references/story_styles.json"
         assert decisions["source_buffer_policy"] == "stable_subwindow_only_no_cross_cut_tail_buffer"
@@ -102,7 +102,7 @@ def main() -> int:
             "--no-exists",
         )
 
-    with tempfile.TemporaryDirectory(prefix="anime_noref_v1413_init_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="anime_noref_v1414_init_") as tmp:
         root = Path(tmp)
         run_python("scripts/init_project_scripts.py", "--project-root", root)
         required = [
@@ -117,7 +117,7 @@ def main() -> int:
         if missing:
             raise AssertionError(f"project initializer missing files: {missing}")
 
-    print("PASS v1.4.13 smoke test")
+    print("PASS v1.4.14 smoke test")
     return 0
 
 

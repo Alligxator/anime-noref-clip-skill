@@ -638,7 +638,7 @@ Minimum shape:
 
 ```json
 {
-  "skill_version": "v1.4.13",
+  "skill_version": "v1.4.14",
   "project": "轮回7次的恶役千金_EP01",
   "current_phase": "creative_qc",
   "decisions": {

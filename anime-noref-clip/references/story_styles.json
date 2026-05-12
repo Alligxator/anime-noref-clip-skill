@@ -1,5 +1,5 @@
 {
-  "schema_version": "anime-noref-clip.story_styles.v1.4.12",
+  "schema_version": "anime-noref-clip.story_styles.v1.4.14",
   "default_style": "style_01_aggressive_youtube_cold_start",
   "style_anchor_base": "references/story_styles.json#styles/",
   "styles": {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "anime-noref-clip.story_styles.schema.v1.4.12",
+  "$id": "anime-noref-clip.story_styles.schema.v1.4.14",
   "title": "Anime No-Ref Clip Story Style Presets",
   "type": "object",
   "required": [
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "anime-noref-clip.story_styles.v1.4.12"
+      "const": "anime-noref-clip.story_styles.v1.4.14"
     },
     "default_style": {
       "type": "string",
@@ -92,13 +92,74 @@
           "$ref": "#/$defs/stringList"
         },
         "script_rules": {
-          "type": "object"
+          "$ref": "#/$defs/scriptRules"
         },
         "shot_mapping_rules": {
-          "type": "object"
+          "$ref": "#/$defs/shotMappingRules"
         },
         "creative_qc_profile": {
           "$ref": "#/$defs/creativeQcProfile"
+        }
+      },
+      "additionalProperties": true
+    },
+    "scriptRules": {
+      "type": "object",
+      "required": [
+        "opening",
+        "middle",
+        "ending",
+        "support"
+      ],
+      "properties": {
+        "opening": {
+          "type": "string",
+          "minLength": 1
+        },
+        "middle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ending": {
+          "type": "string",
+          "minLength": 1
+        },
+        "support": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "shotMappingRules": {
+      "type": "object",
+      "required": [
+        "cold_open",
+        "body",
+        "unit_binding",
+        "replacement",
+        "large_jumps"
+      ],
+      "properties": {
+        "cold_open": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit_binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replacement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "large_jumps": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": true

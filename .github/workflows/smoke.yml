@@ -1,0 +1,22 @@
+name: smoke
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  anime-noref-clip-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run anime no-ref clip smoke tests
+        run: python3 anime-noref-clip/scripts/smoke_test_v1414.py
+      - name: Validate story styles
+        run: python3 anime-noref-clip/scripts/validate_story_styles.py
+      - name: Resolve natural preset
+        run: python3 anime-noref-clip/scripts/resolve_story_style.py --style natural
+      - name: Resolve action preset
+        run: python3 anime-noref-clip/scripts/resolve_story_style.py --style action

@@ -94,7 +94,7 @@ def main() -> int:
     root = args.project_root.expanduser().resolve()
     state_path = root / args.state
     state = load_json(state_path) if state_path.exists() else {}
-    state["skill_version"] = "v1.4.13"
+    state["skill_version"] = "v1.4.14"
     decisions = state.setdefault("decisions", {})
     checks = state.setdefault("checks", {})
     artifacts = state.setdefault("artifacts", {})
