@@ -58,6 +58,13 @@ POST_HOOK_MAIN_PATH = "contiguous_source_blocks"
 CLONE_PADDING_POLICY = "no_clone_padding_except_final_2_frames"
 ALIGNMENT_SOLVE_ORDER = "shot_count_then_speed"
 SOURCE_BUFFER_POLICY = "stable_subwindow_only_no_cross_cut_tail_buffer"
+WORKFLOW_DEFAULTS_SCHEMA_VERSION = "anime-noref-clip.workflow_defaults.v1.4.13"
+EMBEDDED_WORKFLOW_DEFAULTS = {
+    "schema_version": WORKFLOW_DEFAULTS_SCHEMA_VERSION,
+    "decision_defaults": {
+        "source_buffer_policy": SOURCE_BUFFER_POLICY,
+    },
+}
 
 
 def load_story_style_config(project_dir: Path) -> dict[str, Any]:
@@ -73,6 +80,27 @@ def load_story_style_config(project_dir: Path) -> dict[str, Any]:
             except json.JSONDecodeError as exc:
                 return {"_load_error": f"invalid story style config {path}: {exc}"}
     return EMBEDDED_STORY_STYLES
+
+
+def load_workflow_defaults(project_dir: Path) -> dict[str, Any]:
+    candidates = [project_dir / "references" / "workflow_defaults.json"]
+    script_root = Path(__file__).resolve().parents[1]
+    candidates.append(script_root / "references" / "workflow_defaults.json")
+    for path in candidates:
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                return {"_load_error": f"invalid workflow defaults config {path}: {exc}"}
+    return EMBEDDED_WORKFLOW_DEFAULTS
+
+
+def workflow_decision_default(project_dir: Path, key: str, fallback: Any) -> Any:
+    config = load_workflow_defaults(project_dir)
+    defaults = config.get("decision_defaults", {})
+    if isinstance(defaults, dict) and key in defaults:
+        return defaults[key]
+    return fallback
 
 
 def story_style_map(project_dir: Path) -> dict[str, dict[str, Any]]:
@@ -521,8 +549,14 @@ def validate_pacing(
     require_true(failures, data, "checks.post_tts_speed_range_passed")
     require_true(failures, data, "checks.post_tts_shot_count_passed")
     require_true(failures, data, "checks.stable_subwindows_done")
+    workflow_defaults = load_workflow_defaults(project_dir)
+    if workflow_defaults.get("_load_error"):
+        failures.append(workflow_defaults["_load_error"])
     require_equals(
-        failures, data, "decisions.source_buffer_policy", SOURCE_BUFFER_POLICY
+        failures,
+        data,
+        "decisions.source_buffer_policy",
+        workflow_decision_default(project_dir, "source_buffer_policy", SOURCE_BUFFER_POLICY),
     )
     require_true(failures, data, "checks.safe_tail_buffer_policy_applied")
     require_lte(failures, data, "checks.safe_render_tail_buffer_frames", 2)

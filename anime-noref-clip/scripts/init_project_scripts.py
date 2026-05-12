@@ -56,7 +56,7 @@ def main() -> int:
             )
             results.append((status, f"tools/{script_name}"))
 
-    for rel in ("story_styles.json", "story_styles.schema.json"):
+    for rel in ("story_styles.json", "story_styles.schema.json", "workflow_defaults.json"):
         ref_src = SKILL_ROOT / "references" / rel
         if ref_src.exists():
             status = copy_file(

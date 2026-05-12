@@ -8,7 +8,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "references" / "story_styles.json"
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_CONFIG = SKILL_ROOT / "references" / "story_styles.json"
+DEFAULT_WORKFLOW_DEFAULTS = SKILL_ROOT / "references" / "workflow_defaults.json"
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -18,6 +20,16 @@ def load_json(path: Path) -> dict[str, Any]:
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def load_decision_defaults(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    payload = load_json(path)
+    defaults = payload.get("decision_defaults", {})
+    if not isinstance(defaults, dict):
+        raise SystemExit(f"workflow defaults must contain decision_defaults object: {path}")
+    return defaults
 
 
 def resolve_style(config: dict[str, Any], requested: str | None) -> tuple[str, dict[str, Any]]:
@@ -47,6 +59,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Resolve story style and update workflow_state.json.")
     parser.add_argument("--style", default="", help="Style id or alias. Defaults to config default_style.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--workflow-defaults", type=Path, default=DEFAULT_WORKFLOW_DEFAULTS)
     parser.add_argument("--project-root", type=Path, default=Path("."))
     parser.add_argument("--state", default="workflow_state.json")
     parser.add_argument("--write", action="store_true", help="Write the resolved style into workflow_state.json.")
@@ -55,6 +68,8 @@ def main() -> int:
 
     config_path = args.config.expanduser().resolve()
     config = load_json(config_path)
+    workflow_defaults_path = args.workflow_defaults.expanduser().resolve()
+    workflow_defaults = load_decision_defaults(workflow_defaults_path)
     style_id, style = resolve_style(config, args.style or None)
     anchor = f"{config.get('style_anchor_base', 'references/story_styles.json#styles/')}{style_id}"
     overlay = dict(style.get("decision_overlay", {}))
@@ -69,6 +84,7 @@ def main() -> int:
         "target_shot_count_min": shot_min,
         "target_shot_count_max": shot_max,
         "style_config": "references/story_styles.json",
+        "workflow_defaults": workflow_defaults,
     }
 
     if not args.write:
@@ -78,7 +94,7 @@ def main() -> int:
     root = args.project_root.expanduser().resolve()
     state_path = root / args.state
     state = load_json(state_path) if state_path.exists() else {}
-    state["skill_version"] = "v1.4.12"
+    state["skill_version"] = "v1.4.13"
     decisions = state.setdefault("decisions", {})
     checks = state.setdefault("checks", {})
     artifacts = state.setdefault("artifacts", {})
@@ -89,6 +105,9 @@ def main() -> int:
         if args.preserve_existing_overrides and current not in (None, value):
             overrides.append({"field": key, "preset_value": value, "final_value": current, "reason": "preserved existing workflow_state decision"})
             continue
+        decisions[key] = value
+
+    for key, value in workflow_defaults.items():
         decisions[key] = value
 
     target_duration = float(decisions.get("target_duration_sec", overlay.get("target_duration_sec", 60)))

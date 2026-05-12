@@ -45,6 +45,7 @@ REQUIRED_QC_KEYS = {
     "min_hook_candidates",
     "unsupported_claims_count",
     "generic_exposition_lines_max",
+    "first_3s_requires_subject_and_conflict",
     "rehook_interval_max_sec",
     "cold_open_max_sec",
     "return_to_main_timeline_max_sec",
@@ -57,6 +58,55 @@ REQUIRED_QC_KEYS = {
 }
 
 
+STRING_OVERLAY_KEYS = {
+    "retention_mode",
+    "hook_strategy",
+    "script_density",
+    "shot_energy",
+    "post_hook_main_path",
+    "clone_padding_policy",
+    "alignment_solve_order",
+    "cold_open_policy",
+}
+BOOLEAN_OVERLAY_KEYS = {
+    "nonlinear_teaser_allowed",
+    "cold_open_allow_nonlinear",
+}
+INTEGER_OVERLAY_KEYS = {
+    "max_nonlinear_exceptions",
+}
+NUMBER_OVERLAY_KEYS = {
+    "target_duration_sec",
+    "cold_open_max_sec",
+    "post_hook_min_shot_duration",
+    "dialogue_scene_min_shot_duration",
+}
+RANGE_OVERLAY_KEYS = {
+    "target_shot_count_60s",
+    "hook_speed_range",
+    "post_hook_speed_range",
+    "absolute_non_hook_speed_range",
+}
+BOOLEAN_QC_KEYS = {
+    "first_3s_requires_subject_and_conflict",
+    "post_hook_contiguous_source_blocks",
+    "unique_shots",
+}
+INTEGER_QC_KEYS = {
+    "min_hook_candidates",
+    "unsupported_claims_count",
+    "generic_exposition_lines_max",
+    "op_ed_overlap_count",
+}
+NUMBER_QC_KEYS = {
+    "rehook_interval_max_sec",
+    "cold_open_max_sec",
+    "return_to_main_timeline_max_sec",
+    "post_hook_min_shot_duration_sec",
+    "dialogue_scene_min_shot_duration_sec",
+}
+
+
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -66,16 +116,42 @@ def require(condition: bool, failures: list[str], message: str) -> None:
         failures.append(message)
 
 
+def is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def validate_string(value: Any, failures: list[str], where: str) -> None:
+    require(isinstance(value, str) and bool(value), failures, f"{where} must be a non-empty string")
+
+
+def validate_boolean(value: Any, failures: list[str], where: str) -> None:
+    require(isinstance(value, bool), failures, f"{where} must be boolean")
+
+
+def validate_integer(value: Any, failures: list[str], where: str) -> None:
+    require(isinstance(value, int) and not isinstance(value, bool), failures, f"{where} must be integer")
+    if isinstance(value, int) and not isinstance(value, bool):
+        require(value >= 0, failures, f"{where} must be non-negative")
+
+
+def validate_number(value: Any, failures: list[str], where: str, *, positive: bool = False) -> None:
+    require(is_number(value), failures, f"{where} must be numeric")
+    if is_number(value):
+        if positive:
+            require(float(value) > 0, failures, f"{where} must be > 0")
+        else:
+            require(float(value) >= 0, failures, f"{where} must be non-negative")
+
+
 def validate_range(value: Any, failures: list[str], where: str) -> None:
     require(isinstance(value, list) and len(value) == 2, failures, f"{where} must be a two-item list")
     if not (isinstance(value, list) and len(value) == 2):
         return
-    try:
-        lo = float(value[0])
-        hi = float(value[1])
-    except (TypeError, ValueError):
+    if not (is_number(value[0]) and is_number(value[1])):
         failures.append(f"{where} values must be numeric")
         return
+    lo = float(value[0])
+    hi = float(value[1])
     require(lo <= hi, failures, f"{where} min must be <= max")
     require(lo >= 0, failures, f"{where} min must be non-negative")
 
@@ -127,10 +203,21 @@ def validate(config: dict[str, Any]) -> list[str]:
         if isinstance(overlay, dict):
             missing_overlay = REQUIRED_OVERLAY_KEYS - set(overlay)
             require(not missing_overlay, failures, f"{where}.decision_overlay missing keys: {sorted(missing_overlay)}")
-            validate_range(overlay.get("target_shot_count_60s"), failures, f"{where}.decision_overlay.target_shot_count_60s")
-            validate_range(overlay.get("hook_speed_range"), failures, f"{where}.decision_overlay.hook_speed_range")
-            validate_range(overlay.get("post_hook_speed_range"), failures, f"{where}.decision_overlay.post_hook_speed_range")
-            validate_range(overlay.get("absolute_non_hook_speed_range"), failures, f"{where}.decision_overlay.absolute_non_hook_speed_range")
+            for key in STRING_OVERLAY_KEYS:
+                validate_string(overlay.get(key), failures, f"{where}.decision_overlay.{key}")
+            for key in BOOLEAN_OVERLAY_KEYS:
+                validate_boolean(overlay.get(key), failures, f"{where}.decision_overlay.{key}")
+            for key in INTEGER_OVERLAY_KEYS:
+                validate_integer(overlay.get(key), failures, f"{where}.decision_overlay.{key}")
+            for key in NUMBER_OVERLAY_KEYS:
+                validate_number(
+                    overlay.get(key),
+                    failures,
+                    f"{where}.decision_overlay.{key}",
+                    positive=key == "target_duration_sec",
+                )
+            for key in RANGE_OVERLAY_KEYS:
+                validate_range(overlay.get(key), failures, f"{where}.decision_overlay.{key}")
             if overlay.get("nonlinear_teaser_allowed") is False:
                 require(overlay.get("max_nonlinear_exceptions") == 0, failures, f"{where} nonlinear=false requires max_nonlinear_exceptions=0")
 
@@ -139,8 +226,13 @@ def validate(config: dict[str, Any]) -> list[str]:
         if isinstance(qc, dict):
             missing_qc = REQUIRED_QC_KEYS - set(qc)
             require(not missing_qc, failures, f"{where}.creative_qc_profile missing keys: {sorted(missing_qc)}")
+            for key in BOOLEAN_QC_KEYS:
+                validate_boolean(qc.get(key), failures, f"{where}.creative_qc_profile.{key}")
+            for key in INTEGER_QC_KEYS:
+                validate_integer(qc.get(key), failures, f"{where}.creative_qc_profile.{key}")
+            for key in NUMBER_QC_KEYS:
+                validate_number(qc.get(key), failures, f"{where}.creative_qc_profile.{key}")
             validate_range(qc.get("selected_shot_count_60s"), failures, f"{where}.creative_qc_profile.selected_shot_count_60s")
-            require(int(qc.get("min_hook_candidates", 0)) >= 0, failures, f"{where}.creative_qc_profile.min_hook_candidates must be non-negative")
     return failures
 
 

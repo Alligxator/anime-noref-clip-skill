@@ -1,0 +1,6 @@
+{
+  "schema_version": "anime-noref-clip.workflow_defaults.v1.4.13",
+  "decision_defaults": {
+    "source_buffer_policy": "stable_subwindow_only_no_cross_cut_tail_buffer"
+  }
+}

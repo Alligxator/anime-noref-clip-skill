@@ -11,78 +11,263 @@
   ],
   "properties": {
     "schema_version": {
-      "type": "string"
+      "const": "anime-noref-clip.story_styles.v1.4.12"
     },
     "default_style": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1
     },
     "style_anchor_base": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1
     },
     "styles": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": {
-        "type": "object",
-        "required": [
-          "preset_id",
-          "label",
-          "aliases",
-          "use_when",
-          "decision_overlay",
-          "selection_bias",
-          "avoid",
-          "script_rules",
-          "shot_mapping_rules",
-          "creative_qc_profile"
-        ],
-        "properties": {
-          "preset_id": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1
-          },
-          "aliases": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "uniqueItems": true
-          },
-          "use_when": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "decision_overlay": {
-            "type": "object"
-          },
-          "selection_bias": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "avoid": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "script_rules": {
-            "type": "object"
-          },
-          "shot_mapping_rules": {
-            "type": "object"
-          },
-          "creative_qc_profile": {
-            "type": "object"
-          }
-        }
+        "$ref": "#/$defs/style"
       }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "stringList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "numberRange": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "style": {
+      "type": "object",
+      "required": [
+        "preset_id",
+        "label",
+        "aliases",
+        "use_when",
+        "decision_overlay",
+        "selection_bias",
+        "avoid",
+        "script_rules",
+        "shot_mapping_rules",
+        "creative_qc_profile"
+      ],
+      "properties": {
+        "preset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aliases": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/stringList"
+            },
+            {
+              "uniqueItems": true
+            }
+          ]
+        },
+        "use_when": {
+          "$ref": "#/$defs/stringList"
+        },
+        "decision_overlay": {
+          "$ref": "#/$defs/decisionOverlay"
+        },
+        "selection_bias": {
+          "$ref": "#/$defs/stringList"
+        },
+        "avoid": {
+          "$ref": "#/$defs/stringList"
+        },
+        "script_rules": {
+          "type": "object"
+        },
+        "shot_mapping_rules": {
+          "type": "object"
+        },
+        "creative_qc_profile": {
+          "$ref": "#/$defs/creativeQcProfile"
+        }
+      },
+      "additionalProperties": true
+    },
+    "decisionOverlay": {
+      "type": "object",
+      "required": [
+        "retention_mode",
+        "hook_strategy",
+        "nonlinear_teaser_allowed",
+        "max_nonlinear_exceptions",
+        "target_duration_sec",
+        "script_density",
+        "shot_energy",
+        "cold_open_max_sec",
+        "cold_open_allow_nonlinear",
+        "post_hook_main_path",
+        "post_hook_min_shot_duration",
+        "dialogue_scene_min_shot_duration",
+        "target_shot_count_60s",
+        "hook_speed_range",
+        "post_hook_speed_range",
+        "absolute_non_hook_speed_range",
+        "clone_padding_policy",
+        "alignment_solve_order",
+        "cold_open_policy"
+      ],
+      "properties": {
+        "retention_mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hook_strategy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nonlinear_teaser_allowed": {
+          "type": "boolean"
+        },
+        "max_nonlinear_exceptions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "target_duration_sec": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "script_density": {
+          "type": "string",
+          "minLength": 1
+        },
+        "shot_energy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cold_open_max_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cold_open_allow_nonlinear": {
+          "type": "boolean"
+        },
+        "post_hook_main_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "post_hook_min_shot_duration": {
+          "type": "number",
+          "minimum": 0
+        },
+        "dialogue_scene_min_shot_duration": {
+          "type": "number",
+          "minimum": 0
+        },
+        "target_shot_count_60s": {
+          "$ref": "#/$defs/numberRange"
+        },
+        "hook_speed_range": {
+          "$ref": "#/$defs/numberRange"
+        },
+        "post_hook_speed_range": {
+          "$ref": "#/$defs/numberRange"
+        },
+        "absolute_non_hook_speed_range": {
+          "$ref": "#/$defs/numberRange"
+        },
+        "clone_padding_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "alignment_solve_order": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cold_open_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "creativeQcProfile": {
+      "type": "object",
+      "required": [
+        "min_hook_candidates",
+        "unsupported_claims_count",
+        "generic_exposition_lines_max",
+        "first_3s_requires_subject_and_conflict",
+        "rehook_interval_max_sec",
+        "cold_open_max_sec",
+        "return_to_main_timeline_max_sec",
+        "selected_shot_count_60s",
+        "post_hook_min_shot_duration_sec",
+        "dialogue_scene_min_shot_duration_sec",
+        "post_hook_contiguous_source_blocks",
+        "unique_shots",
+        "op_ed_overlap_count"
+      ],
+      "properties": {
+        "min_hook_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unsupported_claims_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "generic_exposition_lines_max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "first_3s_requires_subject_and_conflict": {
+          "type": "boolean"
+        },
+        "rehook_interval_max_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cold_open_max_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "return_to_main_timeline_max_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "selected_shot_count_60s": {
+          "$ref": "#/$defs/numberRange"
+        },
+        "post_hook_min_shot_duration_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "dialogue_scene_min_shot_duration_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "post_hook_contiguous_source_blocks": {
+          "type": "boolean"
+        },
+        "unique_shots": {
+          "type": "boolean"
+        },
+        "op_ed_overlap_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
     }
   }
 }

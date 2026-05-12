@@ -6,7 +6,7 @@ defaults, and creative QC profile. It does not override hard production gates:
 source support, GPT visual tagging, no invented plot, full-script TTS, real TTS
 subtitle timing, frame-quantized alignment, layout QA, and delivery QA still apply.
 
-## v1.4.12 Machine-Readable Config
+## v1.4.12+ Machine-Readable Config
 
 `story_styles.json` is the canonical preset source. Keep this Markdown file aligned with that JSON, or regenerate it from the JSON when adding styles. Validate changes with:
 
