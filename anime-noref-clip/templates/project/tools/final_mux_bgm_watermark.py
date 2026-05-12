@@ -63,7 +63,7 @@ def main() -> int:
     parser.add_argument("--bgm", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--duration", type=float)
-    parser.add_argument("--watermark-text", default="@YourHandle")
+    parser.add_argument("--watermark-text", default="@AlsinCro")
     parser.add_argument("--narration-volume", type=float, default=1.0)
     parser.add_argument("--bgm-volume", type=float, default=0.15)
     parser.add_argument("--bgm-atempo", type=float, default=1.0)

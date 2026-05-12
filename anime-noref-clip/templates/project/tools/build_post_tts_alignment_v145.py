@@ -670,7 +670,7 @@ def infer_tts_audio(args, tts: dict) -> str:
         return str(args.tts_audio)
     if tts.get("audio_path"):
         return str(tts["audio_path"])
-    return f"{args.tts_dir}/narration.wav"
+    return f"{args.tts_dir}/narration_full.wav"
 
 
 def normalize_pick(pick: dict, index: int) -> dict:

@@ -19,6 +19,10 @@ ALLOWED_OUTPUT_ASPECTS = {
     "16:9",
     "both",
 }
+ALLOWED_STORY_STYLES = {
+    "style_01_aggressive_youtube_cold_start",
+}
+STORY_STYLE_01 = "style_01_aggressive_youtube_cold_start"
 FIXED_TTS_VOICES = {
     "zh-CN": "zh-CN-YunxiNeural",
     "zh": "zh-CN-YunxiNeural",
@@ -223,6 +227,10 @@ def requires_boundary_group_subtitle_plan(data: dict[str, Any]) -> bool:
     return parse_skill_version(get_value(data, "skill_version")) >= (1, 4, 9)
 
 
+def requires_story_style_preset(data: dict[str, Any]) -> bool:
+    return parse_skill_version(get_value(data, "skill_version")) >= (1, 4, 11)
+
+
 def is_vertical_output(data: dict[str, Any]) -> bool:
     aspect = get_value(data, "decisions.output_aspect")
     return aspect in {"vertical", "vertical_9_16", "9:16", "both"}
@@ -417,6 +425,28 @@ def validate_story(
     require_true(failures, data, "checks.black_fade_metadata")
 
 
+def validate_story_style(failures: list[str], data: dict[str, Any]) -> None:
+    if not requires_story_style_preset(data):
+        return
+    require_in(failures, data, "decisions.story_style", ALLOWED_STORY_STYLES)
+    require_nonempty(failures, data, "decisions.story_style_preset")
+    require_nonempty(failures, data, "decisions.story_style_label")
+    require_true(failures, data, "checks.story_style_preset_resolved")
+    if get_value(data, "decisions.story_style") == STORY_STYLE_01:
+        require_equals(
+            failures,
+            data,
+            "decisions.retention_mode",
+            RETENTION_MODE_COLD_START,
+        )
+        require_equals(
+            failures,
+            data,
+            "decisions.hook_strategy",
+            "multi_hook_with_payoff",
+        )
+
+
 def validate_creative(
     failures: list[str],
     data: dict[str, Any],
@@ -425,6 +455,7 @@ def validate_creative(
     check_exists: bool,
 ) -> None:
     validate_story(failures, data, project_dir, check_exists=check_exists)
+    validate_story_style(failures, data)
     require_artifact(
         failures, data, project_dir, "story_atoms", check_exists=check_exists
     )
@@ -434,7 +465,7 @@ def validate_creative(
     require_artifact(
         failures, data, project_dir, "hook_candidates", check_exists=check_exists
     )
-    require_gte(failures, data, "checks.hook_candidates_count", 6)
+    require_gte(failures, data, "checks.hook_candidates_count", 8)
     require_true(failures, data, "checks.chosen_hook_supported")
     require_artifact(
         failures, data, project_dir, "retention_shot_pool", check_exists=check_exists

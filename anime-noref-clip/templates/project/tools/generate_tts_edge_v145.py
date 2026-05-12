@@ -286,7 +286,7 @@ def main() -> int:
     out_rel = out_dir.relative_to(root).as_posix()
     out_dir.mkdir(parents=True, exist_ok=True)
     mp3_path = out_dir / "narration_full.mp3"
-    wav_path = out_dir / "narration.wav"
+    wav_path = out_dir / "narration_full.wav"
     text_path = out_dir / "narration_full.txt"
 
     sentence_boundaries, word_boundaries = asyncio.run(
@@ -295,7 +295,7 @@ def main() -> int:
     text_path.write_text(full_text + "\n", encoding="utf-8")
     convert_mp3_to_wav(mp3_path, wav_path)
     duration = probe_duration(wav_path)
-    audio_rel = f"{out_rel}/narration.wav"
+    audio_rel = f"{out_rel}/narration_full.wav"
     if word_boundaries:
         units_with_timing = group_word_boundaries(
             units, word_boundaries, duration, audio_path=audio_rel

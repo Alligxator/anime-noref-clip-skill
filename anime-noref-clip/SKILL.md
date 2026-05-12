@@ -7,7 +7,7 @@ description: Create or continue a no-reference anime short-video editing pipelin
 
 ## Version
 
-- Version: `v1.4.9`
+- Version: `v1.4.11`
 - Base purpose: turn source anime footage into a no-reference short-video edit by using AssemblyAI transcription with speaker diarization plus mandatory GPT subagent visual tags, extracting source-supported story atoms, building a retention brief, generating supported hook candidates, scoring shots for retention value, writing a high-retention plot narration, selecting aggressive but auditable shots, generating full-script TTS, strictly aligning each narration line to shots, and producing QA-ready output.
 - v1.1.0 update: replace local Whisper large-v3 as the default transcription step with AssemblyAI audio transcription plus speaker diarization.
 - v1.2.0 update: use `gpt-5.5` subagents with `reasoning_effort: low` as the default visual tagging model; escalate selected difficult sheets to `medium`.
@@ -30,7 +30,17 @@ description: Create or continue a no-reference anime short-video editing pipelin
 - v1.4.7 update: remove render-level duration-based shot splitting. Long source shots must remain one real source shot for mapping and rendering; use multi-sample frame extraction for analysis instead of artificial cuts. Frame extraction must use OpenCV for fast batch reads with ffmpeg timestamp fallback for missing frames, and story/tagging gates require zero missing representative frames.
 - v1.4.8 update: make subtitle cue planning a subagent step. A Codex subagent produces `subtitles/semantic_cue_plan.json` with language-aware display chunks; the alignment script attaches those chunks to real TTS boundaries. Local rule splitting is diagnostic fallback only for production v1.4.8 projects.
 - v1.4.9 update: replace text-chunk subtitle matching with a three-stage boundary workflow. First build `subtitles/tts_boundary_table.json` from real TTS `WordBoundary`, then have a Codex subagent group contiguous `boundary_start/boundary_end` ranges in `subtitles/semantic_cue_plan.json`, then let the alignment script validate coverage and use exact boundary times.
+- v1.4.10 update: remove drift between docs, validator, and template scripts. Hook candidate production and creative gates now require at least 8 hooks, cold-start `shot_energy` defaults are unified, `workflow_state` examples use the current version, template TTS writes `tts/narration_full.wav`, and `references/workflow.md` is the canonical source for detailed table rows, schemas, gate thresholds, and state fields.
+- v1.4.11 update: introduce story-style presets. The current aggressive YouTube cold-start behavior is now `style_01_aggressive_youtube_cold_start` in `references/story_styles.md`; future styles should be added there, resolved before retention artifacts, recorded in `workflow_state.json`, and validated for v1.4.11+ states.
 - Project tooling update: new projects must initialize local tools from this skill's `templates/project` framework via `scripts/init_project_scripts.py`. The template includes the generic post-TTS alignment builder. Do not copy `tools/` from older episode projects except as a deliberate, reviewed one-off migration.
+
+## Source Of Truth
+
+- `SKILL.md` is the activation and non-negotiable workflow summary: load it first, then load `references/workflow.md` for detailed rows, schemas, thresholds, and state fields.
+- `references/workflow.md` is canonical for the 22-row execution table, artifact schemas, `workflow_state.json` shape, and gate thresholds. Do not maintain an independent detailed table or threshold list elsewhere.
+- `references/story_styles.md` is canonical for story-style preset definitions. Resolve a preset before retention brief, hook candidates, shot pool, script variants, or shot mapping.
+- `references/subtitle_semantic_cue_plan.md` is canonical for the subtitle boundary-group subagent output schema.
+- `scripts/validate_workflow_state.py` is the machine-checkable gate implementation. When a rule changes, keep `references/workflow.md`, the validator, and template script outputs aligned in the same revision.
 
 ## Core Rule
 
@@ -43,6 +53,7 @@ source analysis
 -> GPT visual tagging
 -> dialogue/frame fusion
 -> story atoms
+-> story style preset
 -> retention brief
 -> hook candidates
 -> retention shot pool
@@ -69,12 +80,15 @@ Visual tagging is mandatory before story generation. Contact sheets must be tagg
 
 The script must be based only on visible action, dialogue, character emotion, object clues, and inferred plot relationships supported by the transcript plus frame tags. Do not invent plot, motives, lore, backstory, off-screen events, outcomes, or character psychology that the source does not support.
 
-## Retention Defaults
+## Story Style Presets
 
-Unless the user explicitly requests a calmer natural recap, default YouTube short-video production to:
+Before retention artifacts or scripts, resolve the story style from `references/story_styles.md`. If the user names a style or alias, use that preset. If no style is specified, use `style_01_aggressive_youtube_cold_start`, which preserves the previous default behavior:
 
 ```json
 {
+  "story_style": "style_01_aggressive_youtube_cold_start",
+  "story_style_preset": "references/story_styles.md#style_01_aggressive_youtube_cold_start",
+  "story_style_label": "Aggressive YouTube Cold Start",
   "retention_mode": "aggressive_youtube_cold_start",
   "hook_strategy": "multi_hook_with_payoff",
   "nonlinear_teaser_allowed": true,
@@ -92,18 +106,7 @@ Unless the user explicitly requests a calmer natural recap, default YouTube shor
 }
 ```
 
-Use natural plot mode only when the user asks for a calmer recap, full-episode continuity, or low-risk editing:
-
-```json
-{
-  "retention_mode": "natural_plot_explanation",
-  "hook_strategy": "single_light_hook",
-  "nonlinear_teaser_allowed": false,
-  "shot_energy": "moderate"
-}
-```
-
-For cold-start mode, every hook must have source support and a payoff or clarification within 6-15 seconds. A hook is valid only if grounded in visible danger, contradiction, dialogue confession, emotional reversal, character choice, object clue, identity mismatch, consequence shown on screen, or a source-supported future outcome used as a reviewed teaser.
+For `style_01_aggressive_youtube_cold_start`, every hook must have source support and a payoff or clarification within 6-15 seconds. A hook is valid only if grounded in visible danger, contradiction, dialogue confession, emotional reversal, character choice, object clue, identity mismatch, consequence shown on screen, or a source-supported future outcome used as a reviewed teaser. Add future styles only in `references/story_styles.md`, then update workflow state validation if a new preset needs machine checks.
 
 ## Execution Plan Table
 
@@ -126,30 +129,7 @@ The table must include at least:
 
 Allowed statuses are `Pending`, `In progress`, `Done`, and `Blocked`.
 
-The v1.4.9 table must include these rows and visible gate notes:
-
-1. Source analysis, state setup, and project tool initialization — project-isolated paths only; inspect read-only before table; new projects must run `init_project_scripts.py` from the skill template and must not copy another episode's `tools/`.
-2. Cut strategy decision and cut gate — stop until `rough` or `detailed` is approved.
-3. Shot detection, frame extraction, black/fade metadata — no shot work before cut gate; real ffmpeg scene cuts only, no render-level duration splits; long shots use multi-sample frames; extraction must end with zero missing frames.
-4. GPT visual tagging by `gpt-5.5` subagents and story gate — subagent JSONL required; local notes do not count.
-5. Dialogue/frame fusion — fuse transcript plus visual tags; do not write story from transcript alone.
-6. Story atom extraction — source-supported atoms only; no narration yet.
-7. Retention brief — define hook/payoff/skip rules before scripts.
-8. Hook candidates — at least 8 supported hooks; reject unsupported hype.
-9. Retention shot pool — score shots and blocks; penalize continuity cost and repetition.
-10. Script variants — at least 3 variants; source-supported micro-hooks only.
-11. Chosen script — choose variant before mapping; no unsupported claims.
-12. Aggressive shot mapping — cold open <= 5s, return <= 8s, body uses contiguous source blocks, 25-35 shots for 60s.
-13. Creative retention QC — must pass shot count, block continuity, speed/pacing intent, OP/ED, uniqueness, and support checks before review.
-14. Review artifacts and user approval — no TTS before accepted script-to-shot review.
-15. Full-script TTS and TTS gate — one continuous TTS only; no `unit_*` audio or concat manifest.
-16. Post-TTS pacing repair gate — real TTS duration controls shot count, source windows, and speed; failed speed/shot count repairs block render.
-17. TTS boundary table, subagent boundary-group subtitles, strict/frame-quantized alignment, and subtitle cleanup — build boundary table first, subagent groups boundary ids, script validates coverage/timing; solve shot count before speed.
-18. Output aspect/layout confirmation and compose gate — vertical means blurred background plus full 16:9 foreground centered left/right and top/bottom; subtitles are positioned from foreground box.
-19. Segment render and timing probe — rendered frame counts must match; drift thresholds apply.
-20. Internal jump scan — scan rendered frames for hidden source-window cuts; internal jump count must be 0.
-21. Final mux with BGM/watermark/subtitles — watermark strategy must be recorded when enabled.
-22. Layout/subtitle/watermark QA checks and delivery gate — QA frames prove centered full foreground, subtitles inside foreground box not blur, timing, watermark, ffprobe, blackdetect, and internal-jump scan.
+Use the canonical 22-row table in `references/workflow.md` under `Table-Driven Execution`. Reproduce those rows verbatim when publishing a run table, including each row's visible gate/rule note; this file intentionally does not keep a second detailed row list.
 
 ## Activation Protocol
 
@@ -170,7 +150,8 @@ If the validator fails, fix upstream state or ask for the missing decision befor
 ## Required Decisions
 
 - Before initial shot selection, ask whether the cut should be `rough` or `detailed` unless already specified. If missing, pause after source discovery, `ffprobe`, subtitle checks, and `workflow_state.json` setup.
-- For YouTube cold-start work, default to `retention_mode=aggressive_youtube_cold_start` unless the user asks for a calmer recap. Record the decision.
+- Resolve `decisions.story_style` from `references/story_styles.md` before retention artifacts. If unspecified, default to `style_01_aggressive_youtube_cold_start` and record `decisions.story_style`, `decisions.story_style_preset`, `decisions.story_style_label`, and `checks.story_style_preset_resolved=true`.
+- For YouTube cold-start work, `style_01_aggressive_youtube_cold_start` maps to `retention_mode=aggressive_youtube_cold_start` and the existing aggressive cold-start defaults unless the user explicitly chooses a different preset.
 - If cold-start mode uses nonlinear shots, document every exception in `nonlinear_exceptions.json`, include it in review, and keep exceptions within `decisions.max_nonlinear_exceptions`.
 - Cold open may use 0.6-1.0s fast cuts for the first 3-5 seconds, but it must return to the main timeline within 6-8 seconds.
 - After the hook, select contiguous source blocks instead of scattered high-energy shots. Prefer 3-6 continuous story blocks for the body of a 60-second short, with each script unit bound to a small block.
@@ -182,7 +163,7 @@ If the validator fails, fix upstream state or ask for the missing decision befor
 - Real TTS duration overrides all estimated duration. After TTS, run post-TTS pacing repair before subtitle alignment, segment render, or compose.
 - For English 60-second shorts, use an independent word budget, usually `130-145` words. If the script is too long, revise before render instead of slowing footage excessively.
 - Subtitles must use the three-stage boundary workflow. Build `subtitles/tts_boundary_table.json` from real TTS boundaries, then have a Codex subagent write `subtitles/semantic_cue_plan.json` by grouping contiguous `boundary_start/boundary_end` ranges into readable cues, then let the alignment builder validate coverage and use exact boundary times. For Edge TTS, use `WordBoundary`; do not hard-split subtitles only by script lines, raw character count, raw provider token groups, or proportional text.
-- When watermarking is requested and no new text is specified, use `@YourHandle` with slow dynamic motion and opacity cycling around `5%` to `15%`.
+- When watermarking is requested and no new text is specified, use `@AlsinCro` with slow dynamic motion and opacity cycling around `5%` to `15%`.
 - Default to mandatory subagent GPT visual tagging. If the user opts out, pause before story/script generation and ask for a replacement review method.
 - Default to modest speed matching. Hook segments may use about `0.75x` to `1.35x`; post-hook body should stay around `0.88x` to `1.18x`, with non-hook extremes no wider than `0.75x` to `1.25x`.
 - Do not use `tpad=clone` to stretch a short shot. First reduce shot count, extend the source window, or rebalance narration-to-shot ownership; only use clone padding as a final 1-2 frame fallback.
@@ -193,7 +174,7 @@ If the validator fails, fix upstream state or ask for the missing decision befor
 1. **Preprocess and index source**
    - Validate source media with `ffprobe`.
    - For a new project, initialize project-local scripts from this skill template before creating cut-dependent artifacts:
-     `python3 ~/.codex/skills/anime-noref-clip/scripts/init_project_scripts.py --project-root <project>`.
+     `python3 /Users/gxator.alli/.codex/skills/anime-noref-clip/scripts/init_project_scripts.py --project-root <project>`.
      Do not seed new project tools by copying another episode's `tools/` directory.
    - Confirm `rough` versus `detailed` before scene detection, shot preview generation, frame extraction, contact sheets, visual tagging, story scripting, or shot mapping.
    - Detect real shots from ffmpeg scene cuts. Do not add duration-based artificial cuts or use artificial long-shot split points as render boundaries.
@@ -214,7 +195,8 @@ If the validator fails, fix upstream state or ask for the missing decision befor
 
 4. **Build retention artifacts**
    - Extract compact `story_atoms.json` from fused dialogue and visual tags before writing narration.
-   - Build `retention_brief.json` with main viewer question, first 2-second hook, first 10-second question, midpoint payoff, strongest ending point, skipped source material, allowed operations, and forbidden operations.
+   - Resolve the story style preset from `references/story_styles.md` and record it in `workflow_state.json` before retention brief, hook candidates, shot pool, script variants, or shot mapping.
+   - Build `retention_brief.json` with the resolved preset, main viewer question, first 2-second hook, first 10-second question, midpoint payoff, strongest ending point, skipped source material, allowed operations, and forbidden operations.
    - Generate at least 8 supported `hook_candidates.json` entries and choose one based on support, visual salience, mystery/conflict, and payoff availability.
    - Score `retention_shot_pool.json` for visual salience, emotion, motion, mystery, conflict, reaction, object clues, continuity cost, repetition risk, block membership, spoiler level, and risk flags.
    - Generate at least three `script_variants.json` variants: `A_clear_plot`, `B_aggressive_retention`, and `C_high_density_reversal`. Prefer `B_aggressive_retention` unless it fails support or visual-match checks.
@@ -311,6 +293,7 @@ For a proper v1.4.9 handoff, produce or update:
 - `story_beats.json`
 - `episode_summary.json`
 - `story_atoms.json`
+- resolved `decisions.story_style`, `decisions.story_style_preset`, `decisions.story_style_label`, and `checks.story_style_preset_resolved=true` in `workflow_state.json`
 - `retention_brief.json`
 - `hook_candidates.json`
 - `retention_shot_pool.json`
@@ -341,14 +324,14 @@ For a proper v1.4.9 handoff, produce or update:
 
 ## References
 
-For detailed artifact schemas, prompt essentials, workflow state fields, and gate rules, read `references/workflow.md`. For the subtitle subagent JSON schema and prompt constraints, read `references/subtitle_semantic_cue_plan.md`.
+For detailed artifact schemas, prompt essentials, workflow state fields, and gate rules, read `references/workflow.md`. For story-style presets, read `references/story_styles.md`. For the subtitle subagent JSON schema and prompt constraints, read `references/subtitle_semantic_cue_plan.md`.
 
 ## Project Script Framework
 
 The skill-owned script framework lives in `templates/project`. Use it as the clean baseline for new projects:
 
 ```bash
-python3 ~/.codex/skills/anime-noref-clip/scripts/init_project_scripts.py --project-root <project>
+python3 /Users/gxator.alli/.codex/skills/anime-noref-clip/scripts/init_project_scripts.py --project-root <project>
 ```
 
 This copies baseline tools into `<project>/tools/` and copies the current workflow validator. The copied files may then be adjusted for the specific project, but the starting point must be the skill template. Do not copy tools from a prior episode project as the default path; that preserves stale source paths, old shot rules, and episode-specific patches.
