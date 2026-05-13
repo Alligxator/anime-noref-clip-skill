@@ -20,3 +20,7 @@ jobs:
         run: python3 anime-noref-clip/scripts/resolve_story_style.py --style natural
       - name: Resolve action preset
         run: python3 anime-noref-clip/scripts/resolve_story_style.py --style action
+      - name: Resolve highlight preset
+        run: python3 anime-noref-clip/scripts/resolve_story_style.py --style highlight
+      - name: Resolve highlight Chinese alias
+        run: python3 anime-noref-clip/scripts/resolve_story_style.py --style 名场面

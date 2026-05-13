@@ -400,6 +400,104 @@
         "unique_shots": true,
         "op_ed_overlap_count": 0
       }
+    },
+    "style_05_highlight_segment_selection": {
+      "preset_id": "style_05_highlight_segment_selection",
+      "label": "Highlight Segment Selection",
+      "aliases": [
+        "preset5",
+        "style5",
+        "highlight",
+        "best_scene",
+        "精彩段落",
+        "名场面"
+      ],
+      "use_when": [
+        "the task is to explain or present a high-conflict highlight segment rather than the full episode plot",
+        "the source has a self-contained exciting scene with visible action, emotional outburst, famous dialogue, or strong reactions",
+        "continuity inside the selected highlight matters more than broad story coverage"
+      ],
+      "decision_overlay": {
+        "retention_mode": "highlight_segment_selection",
+        "hook_strategy": "direct_highlight_with_conflict_intro",
+        "nonlinear_teaser_allowed": false,
+        "max_nonlinear_exceptions": 0,
+        "target_duration_sec": 60,
+        "script_density": "medium_low",
+        "shot_energy": "highlight_continuity_first",
+        "cold_open_max_sec": 4,
+        "cold_open_allow_nonlinear": false,
+        "post_hook_main_path": "single_or_adjacent_contiguous_source_blocks",
+        "post_hook_min_shot_duration": 1.5,
+        "dialogue_scene_min_shot_duration": 1.8,
+        "target_shot_count_60s": [
+          18,
+          26
+        ],
+        "hook_speed_range": [
+          0.85,
+          1.2
+        ],
+        "post_hook_speed_range": [
+          0.9,
+          1.12
+        ],
+        "absolute_non_hook_speed_range": [
+          0.85,
+          1.18
+        ],
+        "clone_padding_policy": "no_clone_padding_except_final_2_frames",
+        "alignment_solve_order": "shot_count_then_speed",
+        "cold_open_policy": "chronological_highlight_segment_only"
+      },
+      "selection_bias": [
+        "action",
+        "emotional outburst",
+        "famous dialogue",
+        "strong reaction",
+        "watchable high-conflict segment",
+        "visual impact",
+        "clear cause and effect"
+      ],
+      "avoid": [
+        "long setup",
+        "background explanation",
+        "fragmented jump cutting",
+        "over-explaining",
+        "unrelated filler shots",
+        "breaking chronology only for stimulation"
+      ],
+      "script_rules": {
+        "opening": "enter the highlight footage directly and optionally add one source-supported conflict line",
+        "middle": "preserve segment continuity and use sparse narration to clarify the active conflict and character reactions",
+        "ending": "end on the strongest emotion, action, or dialogue beat in the segment; do not force full-episode closure",
+        "support": "use only visible footage, dialogue, expression, action, and tagged visual evidence"
+      },
+      "shot_mapping_rules": {
+        "cold_open": "use only chronological footage from the selected highlight segment; do not pull a later climax forward",
+        "body": "prefer one contiguous source block; use adjacent blocks only when needed to complete the highlight beat",
+        "unit_binding": "bind each narration unit to a small contiguous window inside the same highlight segment",
+        "replacement": "prefer adjacent same-segment shots with the same action or emotional function",
+        "large_jumps": "disallow by default; use only natural segment transitions with recorded reasons"
+      },
+      "creative_qc_profile": {
+        "min_hook_candidates": 5,
+        "unsupported_claims_count": 0,
+        "generic_exposition_lines_max": 1,
+        "first_3s_requires_subject_and_conflict": true,
+        "rehook_interval_max_sec": 14,
+        "cold_open_max_sec": 4,
+        "return_to_main_timeline_max_sec": 4,
+        "selected_shot_count_60s": [
+          18,
+          26
+        ],
+        "post_hook_min_shot_duration_sec": 1.5,
+        "dialogue_scene_min_shot_duration_sec": 1.8,
+        "post_hook_contiguous_source_blocks": true,
+        "unique_shots": true,
+        "op_ed_overlap_count": 0
+      }
     }
   }
 }

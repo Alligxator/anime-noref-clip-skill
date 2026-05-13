@@ -94,6 +94,7 @@ Bundled presets:
 - `style_02_natural_plot_explanation`: calmer chronological plot explanation.
 - `style_03_emotional_reversal`: reaction/emotion-led relationship or reversal structure.
 - `style_04_action_battle_escalation`: motion/impact-led battle escalation structure.
+- `style_05_highlight_segment_selection`: continuity-first high-conflict highlight segment selection.
 
 ```json
 {
