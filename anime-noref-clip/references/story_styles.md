@@ -75,6 +75,43 @@ Full machine-readable definitions live in `story_styles.json`.
 - `style_03_emotional_reversal` / Emotional Reversal: relationship or emotion-led edit, preserves reaction pauses, allows one reviewed emotional teaser, and targets 20-30 shots per 60 seconds.
 - `style_04_action_battle_escalation` / Action Battle Escalation: motion/impact-led battle or danger edit, allows reviewed impact teasers, and targets 28-42 shots per 60 seconds.
 - `style_05_highlight_segment_selection` / Highlight Segment Selection: continuity-first high-conflict highlight segment edit, forbids nonlinear teasers, uses medium-low narration density, and targets 18-26 shots per 60 seconds.
+- `style_06_spectacle_escalation_commentary` / Spectacle Escalation Commentary: rotating-hook spectacle, world-rule, and task-escalation commentary; allows at most one reviewed opening teaser and keeps the body chronological, targeting 22-34 shots per 60 seconds.
+
+## style_06_spectacle_escalation_commentary Reference
+
+Use this style for fantasy, food, monster, weapon, ability, secret-place, legendary-expert, or adventure-challenge footage where the visible material can support escalating wonder. It should feel excited, vivid, and surprising, but it must not become unsupported hype.
+
+Default public-facing IP policy:
+
+- Hide anime title, series, official character names, and strongly identifying proper names unless the user explicitly asks to keep them.
+- Use role, relationship, appearance, profession, or story-function labels: `蓝发男人`, `小厨师`, `传说中的铸刀师`, `山顶屋主`, `那名少年`, `他的伙伴`.
+- Internal audit files and visual metadata may retain source-identifying details for verification.
+
+Opening rotation examples:
+
+- 奇观物件："这把还没开刃的菜刀，落地的一瞬间竟然把水泥地切出一道缝。"
+- 秘境地形："眼前这座两万级台阶，不是修出来的，而是被人用刀一阶一阶刻出来的。"
+- 危机场面："小厨师刚靠近木屋，一道刀气就贴着他的身体飞了过去。"
+- 身份反差："传说中的铁血大师，竟然不是满身伤疤的壮汉，而是眼前这个清秀男人。"
+- 世界规则："在这个世界，厨师的菜刀不是普通工具，而是几乎等同于第二条生命。"
+- 任务启动："为了修好断掉的爱刀，蓝发男人必须进入人间界最深处的洞穴。"
+- 能力展示："这只妖兽不是被打飞的，而是被一道看不见的刀气直接逼退。"
+
+Middle progression examples:
+
+- "更夸张的是，这还不是成品，只是一把还没真正开刃的半成品。"
+- "小厨师这才意识到，自己刚才只要慢半秒，就已经被切成两半。"
+- "可蓝发男人很快发现不对劲，因为眼前这个人，和传闻中的怪物级大师完全不一样。"
+- "误会解开后，真正的问题才出现：想要重新打造菜刀，必须找到传说中的梦幻磨刀石。"
+
+Bad -> Good references:
+
+- Bad: "你敢信吗，这个东西太离谱了，简直无敌。"
+- Good: "这把刀甚至还没开刃，落到地上却直接切开了水泥。"
+- Bad: "阿鲁心里非常愤怒，决定教训梅尔克。"
+- Good: "蓝发男人没有继续追问，而是直接挥出手刀，要求和对方切磋。"
+- Bad: "这个大师强到无法想象。"
+- Good: "山下的妖兽追到屋前就停了下来，显然连它们都害怕这里的主人。"
 
 ## style_01_aggressive_youtube_cold_start
 

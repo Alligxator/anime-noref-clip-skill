@@ -498,6 +498,166 @@
         "unique_shots": true,
         "op_ed_overlap_count": 0
       }
+    },
+    "style_06_spectacle_escalation_commentary": {
+      "preset_id": "style_06_spectacle_escalation_commentary",
+      "label": "Spectacle Escalation Commentary",
+      "aliases": [
+        "preset6",
+        "style6",
+        "spectacle",
+        "wonder",
+        "奇观解说",
+        "爽感解说",
+        "设定爽文",
+        "离谱解说"
+      ],
+      "use_when": [
+        "the source contains visible fantasy, food, monster, weapon, ability, secret place, legendary expert, or adventure challenge spectacle",
+        "the edit should turn strange world rules or exaggerated visible events into escalating commentary",
+        "the story can be driven by wonder, surprise, danger, and task escalation rather than complete episode coverage"
+      ],
+      "decision_overlay": {
+        "retention_mode": "spectacle_escalation_commentary",
+        "hook_strategy": "rotating_spectacle_hook_with_escalation",
+        "nonlinear_teaser_allowed": true,
+        "max_nonlinear_exceptions": 1,
+        "target_duration_sec": 60,
+        "script_density": "medium_high",
+        "shot_energy": "wonder_escalation_but_auditable",
+        "cold_open_max_sec": 5,
+        "cold_open_allow_nonlinear": true,
+        "post_hook_main_path": "chronological_contiguous_source_blocks",
+        "post_hook_min_shot_duration": 1.3,
+        "dialogue_scene_min_shot_duration": 1.6,
+        "target_shot_count_60s": [
+          22,
+          34
+        ],
+        "hook_speed_range": [
+          0.8,
+          1.3
+        ],
+        "post_hook_speed_range": [
+          0.88,
+          1.16
+        ],
+        "absolute_non_hook_speed_range": [
+          0.8,
+          1.22
+        ],
+        "clone_padding_policy": "no_clone_padding_except_final_2_frames",
+        "alignment_solve_order": "shot_count_then_speed",
+        "cold_open_policy": "one_reviewed_spectacle_teaser_if_needed_then_chronological"
+      },
+      "selection_bias": [
+        "visible spectacle object",
+        "strange world rule",
+        "monster or creature reveal",
+        "weapon or tool demonstration",
+        "ability display",
+        "secret place or dangerous terrain",
+        "legendary expert reveal",
+        "task escalation",
+        "character shock or awe",
+        "clear visual proof of an absurd claim"
+      ],
+      "avoid": [
+        "repeating the same question-hook opener",
+        "unsupported power scaling",
+        "invented world rules",
+        "overusing empty adjectives",
+        "exposing IP or official character names unless requested",
+        "mid-body nonlinear jumps",
+        "long background exposition",
+        "generic hype without visible evidence"
+      ],
+      "script_rules": {
+        "opening": "rotate spectacle, danger, contrast, world-rule, task, emotion, or ability-display hooks; do not default to repeated question openers such as 'can you believe it'",
+        "middle": "advance one new spectacle fact, character reaction, obstacle, truth, or task escalation every 8-12 seconds while keeping the body chronological",
+        "ending": "end on a larger task, unknown danger, expert secret, abyss entrance, or key choice rather than forcing full episode closure",
+        "support": "excited phrasing is allowed, but names, actions, relationships, outcomes, world rules, and claims must be supported by visible footage, dialogue, expressions, or visual tags; hide IP and official names unless the user explicitly asks to keep them"
+      },
+      "shot_mapping_rules": {
+        "cold_open": "may use one reviewed 3-5 second spectacle teaser only when a stronger hook exists; otherwise start chronologically",
+        "return_to_main_path": "return to the chronological source path within 5 seconds after a teaser",
+        "body": "after the opening, use chronological contiguous source blocks and do not reorder body events",
+        "unit_binding": "bind each narration unit to the visible spectacle, reaction, obstacle, truth, or task beat it describes",
+        "replacement": "prefer adjacent source shots that preserve the same object, creature, ability, place, or reaction context",
+        "large_jumps": "disallow in the body except natural scene or task transitions with recorded reasons"
+      },
+      "script_style_guide": {
+        "tone": "兴奋、惊奇、爽感、画面感强，但不油腻、不机械套话、不脱离画面证据",
+        "sentence_shape": "短句推进；每句话只承载一个可见事实、设定信息、角色反应或危机升级点",
+        "opening_rotation": [
+          "奇观物件",
+          "危机场面",
+          "身份反差",
+          "世界规则",
+          "任务启动",
+          "情绪转折",
+          "能力展示"
+        ],
+        "transition_bank": [
+          "更夸张的是",
+          "下一刻",
+          "然而",
+          "这时他才意识到",
+          "没想到",
+          "危机时刻",
+          "这也意味着"
+        ],
+        "ip_masking": "除非用户明确要求保留，否则公开视频台本默认把作品名、系列名、角色正式名和强识别专有名替换成角色身份、关系、外貌、职业或剧情功能称呼，例如蓝发男人、小厨师、传说中的铸刀师、山顶屋主、那名少年、他的伙伴",
+        "forbidden_patterns": [
+          "无画面支撑的奇观吹法",
+          "每个任务都使用同一种疑问开头",
+          "替角色编造内心活动",
+          "正文中段乱序跳剪",
+          "未被要求时直接暴露 IP 或正式角色名",
+          "机械堆叠转折词"
+        ],
+        "example_lines": [
+          "这把还没开刃的菜刀，落地的一瞬间竟然把水泥地切出一道缝。",
+          "眼前这座两万级台阶，不是修出来的，而是被人用刀一阶一阶刻出来的。",
+          "小厨师刚靠近木屋，一道刀气就贴着他的身体飞了过去。",
+          "传说中的铁血大师，竟然不是满身伤疤的壮汉，而是眼前这个清秀男人。",
+          "在这个世界，厨师的菜刀不是普通工具，而是几乎等同于第二条生命。",
+          "蓝发男人没有继续追问，而是直接挥出手刀，要求和对方切磋。",
+          "山下的妖兽追到屋前就停了下来，显然连它们都害怕这里的主人。"
+        ],
+        "bad_good_examples": [
+          {
+            "bad": "你敢信吗，这个东西太离谱了，简直无敌。",
+            "good": "这把刀甚至还没开刃，落到地上却直接切开了水泥。"
+          },
+          {
+            "bad": "阿鲁心里非常愤怒，决定教训梅尔克。",
+            "good": "蓝发男人没有继续追问，而是直接挥出手刀，要求和对方切磋。"
+          },
+          {
+            "bad": "这个大师强到无法想象。",
+            "good": "山下的妖兽追到屋前就停了下来，显然连它们都害怕这里的主人。"
+          }
+        ]
+      },
+      "creative_qc_profile": {
+        "min_hook_candidates": 7,
+        "unsupported_claims_count": 0,
+        "generic_exposition_lines_max": 1,
+        "first_3s_requires_subject_and_conflict": true,
+        "rehook_interval_max_sec": 12,
+        "cold_open_max_sec": 5,
+        "return_to_main_timeline_max_sec": 5,
+        "selected_shot_count_60s": [
+          22,
+          34
+        ],
+        "post_hook_min_shot_duration_sec": 1.3,
+        "dialogue_scene_min_shot_duration_sec": 1.6,
+        "post_hook_contiguous_source_blocks": true,
+        "unique_shots": true,
+        "op_ed_overlap_count": 0
+      }
     }
   }
 }

@@ -71,6 +71,14 @@ def main() -> int:
     if natural["story_style"] != "style_02_natural_plot_explanation":
         raise AssertionError("natural alias did not resolve to style_02_natural_plot_explanation")
 
+    spectacle = json.loads(run_python("scripts/resolve_story_style.py", "--style", "spectacle").stdout)
+    if spectacle["story_style"] != "style_06_spectacle_escalation_commentary":
+        raise AssertionError("spectacle alias did not resolve to style_06_spectacle_escalation_commentary")
+
+    spectacle_cn = json.loads(run_python("scripts/resolve_story_style.py", "--style", "奇观解说").stdout)
+    if spectacle_cn["story_style"] != "style_06_spectacle_escalation_commentary":
+        raise AssertionError("奇观解说 alias did not resolve to style_06_spectacle_escalation_commentary")
+
     with tempfile.TemporaryDirectory(prefix="anime_noref_v1414_state_") as tmp:
         root = Path(tmp)
         state_path = root / "workflow_state.json"
@@ -91,6 +99,7 @@ def main() -> int:
         assert decisions["story_style"] == "style_02_natural_plot_explanation"
         assert decisions["story_style_config"] == "references/story_styles.json"
         assert decisions["source_buffer_policy"] == "stable_subwindow_only_no_cross_cut_tail_buffer"
+        assert decisions["ip_reference_policy"] == "hide_ip_names_unless_user_explicitly_requests"
         assert artifacts["story_styles_config"] == "references/story_styles.json"
         assert checks["target_shot_count_min"] == 18
         assert checks["target_shot_count_max"] == 28
@@ -101,6 +110,26 @@ def main() -> int:
             "style",
             "--no-exists",
         )
+
+    with tempfile.TemporaryDirectory(prefix="anime_noref_v1414_spectacle_state_") as tmp:
+        root = Path(tmp)
+        state_path = root / "workflow_state.json"
+        write_json(state_path, minimal_story_state())
+        run_python(
+            "scripts/resolve_story_style.py",
+            "--style",
+            "spectacle",
+            "--project-root",
+            root,
+            "--write",
+        )
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        decisions = state["decisions"]
+        checks = state["checks"]
+        assert decisions["story_style"] == "style_06_spectacle_escalation_commentary"
+        assert decisions["ip_reference_policy"] == "hide_ip_names_unless_user_explicitly_requests"
+        assert checks["target_shot_count_min"] == 22
+        assert checks["target_shot_count_max"] == 34
 
     with tempfile.TemporaryDirectory(prefix="anime_noref_v1414_init_") as tmp:
         root = Path(tmp)

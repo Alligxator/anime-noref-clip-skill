@@ -24,3 +24,7 @@ jobs:
         run: python3 anime-noref-clip/scripts/resolve_story_style.py --style highlight
       - name: Resolve highlight Chinese alias
         run: python3 anime-noref-clip/scripts/resolve_story_style.py --style 名场面
+      - name: Resolve spectacle preset
+        run: python3 anime-noref-clip/scripts/resolve_story_style.py --style spectacle
+      - name: Resolve spectacle Chinese alias
+        run: python3 anime-noref-clip/scripts/resolve_story_style.py --style 奇观解说

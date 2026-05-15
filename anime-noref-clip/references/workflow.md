@@ -1187,6 +1187,7 @@ Use these hard rules when creating short-video plot narration:
 - No lore that is not visible or in dialogue.
 - No filling gaps with assumptions.
 - Prefer relationship words over proper names.
+- Unless the user explicitly asks to keep IP names, public-facing scripts, subtitles, title drafts, and description drafts must hide anime title, series, official character names, and strongly identifying proper names. Use role, relationship, appearance, profession, or story-function labels instead. Internal audit files, source paths, shot metadata, and visual tags may keep source-identifying details for verification.
 - Make it understandable without fandom knowledge.
 - Cut slow setup.
 - In natural plot mode, use at most one light opening hook, then move directly into plot causality.

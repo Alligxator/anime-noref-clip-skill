@@ -84,6 +84,8 @@ Visual tagging is mandatory before story generation. Contact sheets must be tagg
 
 The script must be based only on visible action, dialogue, character emotion, object clues, and inferred plot relationships supported by the transcript plus frame tags. Do not invent plot, motives, lore, backstory, off-screen events, outcomes, or character psychology that the source does not support.
 
+Unless the user explicitly asks to keep IP names, public-facing narration, subtitles, title drafts, and description drafts must hide anime title, series, official character names, and strongly identifying proper names. Use role, relationship, appearance, profession, or story-function labels instead. Internal audit files, source paths, shot metadata, and visual tags may retain source-identifying details when needed for verification.
+
 ## Story Style Presets
 
 Before retention artifacts or scripts, resolve the story style from `references/story_styles.json`. If the user names a style or alias, use that preset. If no style is specified, use `style_01_aggressive_youtube_cold_start`, which preserves the previous default behavior. Use `scripts/resolve_story_style.py` when a project state file should be patched.
@@ -95,6 +97,7 @@ Bundled presets:
 - `style_03_emotional_reversal`: reaction/emotion-led relationship or reversal structure.
 - `style_04_action_battle_escalation`: motion/impact-led battle escalation structure.
 - `style_05_highlight_segment_selection`: continuity-first high-conflict highlight segment selection.
+- `style_06_spectacle_escalation_commentary`: spectacle, world-rule, and task-escalation commentary with rotating hooks.
 
 ```json
 {
