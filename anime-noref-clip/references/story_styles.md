@@ -77,6 +77,17 @@ Full machine-readable definitions live in `story_styles.json`.
 - `style_05_highlight_segment_selection` / Highlight Segment Selection: continuity-first high-conflict highlight segment edit, forbids nonlinear teasers, uses medium-low narration density, and targets 18-26 shots per 60 seconds.
 - `style_06_spectacle_escalation_commentary` / Spectacle Escalation Commentary: rotating-hook spectacle, world-rule, and task-escalation commentary; allows at most one reviewed opening teaser and keeps the body chronological, targeting 22-34 shots per 60 seconds.
 
+## Script Style Guide Reference
+
+Every preset has a machine-readable `script_style_guide` in `story_styles.json`. Use it when generating `script_variants.json` and final narration. These guides affect wording only; shot selection, pacing ranges, nonlinear policy, and creative QC still come from each preset's existing decision and mapping fields.
+
+- `style_01`: high-conflict cold start. Example: "少年刚以为自己逃过一劫，门外的人已经举起了刀。"
+- `style_02`: calm causal explanation. Example: "事情要从这场误会开始说起。"
+- `style_03`: visible emotion and relationship reversal. Example: "她没有立刻回答，只是低头攥紧了手里的信。"
+- `style_04`: action threat, impact, and consequence. Example: "黑衣敌人刚冲上来，地面就被这一击砸出裂痕。"
+- `style_05`: single highlight segment tension. Example: "这段最精彩的地方，不是他冲了上去，而是对方站在原地一动不动。"
+- `style_06`: spectacle, world-rule, and task escalation. Example: "这把还没开刃的菜刀，落地的一瞬间竟然把水泥地切出一道缝。"
+
 ## style_06_spectacle_escalation_commentary Reference
 
 Use this style for fantasy, food, monster, weapon, ability, secret-place, legendary-expert, or adventure-challenge footage where the visible material can support escalating wonder. It should feel excited, vivid, and surprising, but it must not become unsupported hype.

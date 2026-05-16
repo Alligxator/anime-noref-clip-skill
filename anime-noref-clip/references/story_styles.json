@@ -80,6 +80,55 @@
         "ending": "end at the strongest retention point; do not require full episode closure",
         "support": "use only visible action, dialogue, emotion, objects, and transcript/frame-supported relationships"
       },
+      "script_style_guide": {
+        "tone": "高冲突、快节奏、强留存，但每个刺激点都必须有画面或台词支撑，并在后文给出 payoff 或升级。",
+        "sentence_shape": "短句推进；每句话优先制造危险、误会、选择、背叛、后果或反应，避免空泛震惊词。",
+        "opening_rotation": [
+          "危险逼近",
+          "信任破裂",
+          "身份暴露",
+          "关键选择",
+          "物件线索",
+          "强反应"
+        ],
+        "transition_bank": [
+          "他刚以为自己安全了",
+          "下一秒",
+          "但真正的问题是",
+          "这不是普通误会",
+          "更麻烦的是",
+          "而这个选择很快带来后果"
+        ],
+        "ip_masking": "除非用户明确要求保留，否则公开视频台本默认把作品名、系列名、角色正式名和强识别专有名替换成角色身份、关系、外貌、职业或剧情功能称呼，例如少年、她的同伴、门外的人、黑衣敌人、那名少女。",
+        "forbidden_patterns": [
+          "没有画面证据的震撼反转",
+          "只喊最强、最炸裂却不说明画面事实",
+          "连续重复同一种冲突句式",
+          "提前泄露没有 payoff 的悬念",
+          "未被要求时直接暴露 IP 或正式角色名"
+        ],
+        "example_lines": [
+          "少年刚以为自己逃过一劫，门外的人已经举起了刀。",
+          "这不是普通误会，因为下一秒，他最信任的人直接站到了对面。",
+          "她刚想解释，身后的同伴却先一步把武器对准了她。",
+          "这枚不起眼的吊坠，正好证明了少年一直隐瞒的身份。",
+          "危险没有结束，因为黑衣敌人已经堵住了唯一的出口。"
+        ],
+        "bad_good_examples": [
+          {
+            "bad": "最震撼的反转来了。",
+            "good": "她刚说完这句话，身后的同伴就把武器对准了她。"
+          },
+          {
+            "bad": "这个敌人强到离谱。",
+            "good": "黑衣敌人只是抬起手，整扇门就被震得四分五裂。"
+          },
+          {
+            "bad": "少年彻底崩溃了。",
+            "good": "少年没有再说话，只是低头看着断掉的刀。"
+          }
+        ]
+      },
       "shot_mapping_rules": {
         "cold_open": "may use up to 5 seconds of fast cuts and at most 2 documented nonlinear exceptions",
         "return_to_main_path": "return to the main source timeline within 6-8 seconds",
@@ -176,6 +225,55 @@
         "middle": "keep events chronological and explain cause-effect relationships compactly",
         "ending": "end at a clear emotional or plot turning point",
         "support": "use only transcript/frame-supported plot relationships"
+      },
+      "script_style_guide": {
+        "tone": "平稳、清楚、可信，重点讲明因果和人物处境，不靠夸张词制造刺激。",
+        "sentence_shape": "按事件顺序组织短句；每句话说明一个原因、行动、结果或关系变化。",
+        "opening_rotation": [
+          "误会起点",
+          "当前处境",
+          "任务原因",
+          "关系变化",
+          "关键发现",
+          "后果说明"
+        ],
+        "transition_bank": [
+          "事情要从这里说起",
+          "因为",
+          "所以",
+          "直到这时",
+          "这也解释了",
+          "接下来"
+        ],
+        "ip_masking": "除非用户明确要求保留，否则公开视频台本默认把作品名、系列名、角色正式名和强识别专有名替换成角色身份、关系、外貌、职业或剧情功能称呼，例如少年、他的同伴、那名少女、村里的医生、负责护送的人。",
+        "forbidden_patterns": [
+          "把普通因果说成惊天反转",
+          "为了留存强行制造不存在的阴谋",
+          "跳过必要原因直接讲结果",
+          "用过度爽文词破坏清晰度",
+          "未被要求时直接暴露 IP 或正式角色名"
+        ],
+        "example_lines": [
+          "事情要从这场误会开始说起。",
+          "他不是故意隐瞒，而是一直没有找到解释的机会。",
+          "为了保护同伴，他只能先把真相藏起来。",
+          "直到那封信被发现，大家才明白他为什么独自离开。",
+          "这场争执没有立刻结束，却让两人的目标终于一致。"
+        ],
+        "bad_good_examples": [
+          {
+            "bad": "更炸裂的是，他居然做出了惊天决定。",
+            "good": "为了保护同伴，他只能先把真相藏起来。"
+          },
+          {
+            "bad": "所有人都被这个超级阴谋震惊了。",
+            "good": "大家这才发现，真正的问题不是敌人，而是他们一直误会了彼此。"
+          },
+          {
+            "bad": "他突然开始疯狂行动。",
+            "good": "听完解释后，他立刻转身去找那名失踪的同伴。"
+          }
+        ]
       },
       "shot_mapping_rules": {
         "cold_open": "chronological source opening or a light same-block hook only",
@@ -274,6 +372,55 @@
         "middle": "let reactions breathe and pay off emotional clues within 8-18 seconds",
         "ending": "end on the strongest emotional reversal or unresolved relationship question",
         "support": "do not state inner psychology unless dialogue, expression, or action supports it"
+      },
+      "script_style_guide": {
+        "tone": "克制、细腻、情绪递进，重点写看得见的反应和关系变化，不替角色编内心独白。",
+        "sentence_shape": "多用反应句和关系句；每句话围绕表情、沉默、动作、物件或一句台词推进情绪。",
+        "opening_rotation": [
+          "沉默反应",
+          "关系问题",
+          "承诺落空",
+          "误解解除",
+          "眼泪或停顿",
+          "信物线索"
+        ],
+        "transition_bank": [
+          "她没有立刻回答",
+          "少年这才明白",
+          "可真正让人难过的是",
+          "直到这一刻",
+          "这句话说完",
+          "两人的关系也彻底变了"
+        ],
+        "ip_masking": "除非用户明确要求保留，否则公开视频台本默认把作品名、系列名、角色正式名和强识别专有名替换成角色身份、关系、外貌、职业或剧情功能称呼，例如少女、少年、她的同伴、曾经救过她的人、那个沉默的孩子。",
+        "forbidden_patterns": [
+          "直接断言角色内心崩溃却没有表情或动作支撑",
+          "用泛泛的虐恋、破防、哭惨替代具体画面",
+          "把情绪停顿过度剪碎",
+          "无证据解释角色动机",
+          "未被要求时直接暴露 IP 或正式角色名"
+        ],
+        "example_lines": [
+          "她没有立刻回答，只是低头攥紧了手里的信。",
+          "少年这才明白，对方不是不在乎，而是一直不敢说出口。",
+          "这句话说完，她的同伴终于停下了脚步。",
+          "那枚旧发卡被拿出来时，两个人都沉默了。",
+          "真正刺痛他的，不是拒绝，而是少女转身前掉下的眼泪。"
+        ],
+        "bad_good_examples": [
+          {
+            "bad": "她内心已经彻底崩溃。",
+            "good": "她一句话都没说，眼泪却已经掉了下来。"
+          },
+          {
+            "bad": "少年非常爱她，所以特别痛苦。",
+            "good": "少年伸手想拉住她，却在半空中停了下来。"
+          },
+          {
+            "bad": "这段感情太虐了。",
+            "good": "两个人明明站得很近，却谁也没有再往前一步。"
+          }
+        ]
       },
       "shot_mapping_rules": {
         "cold_open": "may use one reviewed emotional teaser",
@@ -374,6 +521,55 @@
         "ending": "end at the strongest impact, reversal, or unresolved danger",
         "support": "state only action outcomes visible in the source or dialogue-supported"
       },
+      "script_style_guide": {
+        "tone": "紧张、利落、有冲击感，重点讲清动作、威胁、反击和后果，避免空喊战力。",
+        "sentence_shape": "动作句优先；每句话对应一次攻击、闪避、反击、破坏、压制或局势变化。",
+        "opening_rotation": [
+          "攻击瞬间",
+          "危险后果",
+          "敌人压制",
+          "反击启动",
+          "地形破坏",
+          "力量差距"
+        ],
+        "transition_bank": [
+          "黑衣敌人刚冲上来",
+          "他没有后退",
+          "这一击落下后",
+          "更危险的是",
+          "对方立刻反击",
+          "局势也在这一刻反转"
+        ],
+        "ip_masking": "除非用户明确要求保留，否则公开视频台本默认把作品名、系列名、角色正式名和强识别专有名替换成角色身份、关系、外貌、职业或剧情功能称呼，例如黑衣敌人、少年、蓝发男人、持刀的男人、追击者、他的对手。",
+        "forbidden_patterns": [
+          "无画面支撑的最强、无敌、秒杀",
+          "只讲招式名字不讲画面结果",
+          "过度解释背景拖慢动作",
+          "把不连续动作硬说成一套连招",
+          "未被要求时直接暴露 IP 或正式角色名"
+        ],
+        "example_lines": [
+          "黑衣敌人刚冲上来，地面就被这一击砸出裂痕。",
+          "他没有后退，反而借着冲击直接贴近对手。",
+          "这一击落下后，周围的石墙直接被震碎。",
+          "蓝发男人侧身躲开攻击，下一秒就把对方摔向地面。",
+          "真正危险的是，对方倒下后手里的刀还没有停。"
+        ],
+        "bad_good_examples": [
+          {
+            "bad": "这招强到离谱，无人能挡。",
+            "good": "这一击落下后，周围的石墙直接被震碎。"
+          },
+          {
+            "bad": "两人展开了史诗级大战。",
+            "good": "黑衣敌人先冲上来，少年贴地避开后立刻反击。"
+          },
+          {
+            "bad": "他战斗力爆表。",
+            "good": "他单手挡住刀锋，脚下的地面却已经裂开。"
+          }
+        ]
+      },
       "shot_mapping_rules": {
         "cold_open": "may use fast source-supported impact cuts for up to 5 seconds",
         "return_to_main_path": "return to main source timeline within 8 seconds",
@@ -472,6 +668,55 @@
         "middle": "preserve segment continuity and use sparse narration to clarify the active conflict and character reactions",
         "ending": "end on the strongest emotion, action, or dialogue beat in the segment; do not force full-episode closure",
         "support": "use only visible footage, dialogue, expression, action, and tagged visual evidence"
+      },
+      "script_style_guide": {
+        "tone": "克制但有张力，围绕单个高光段落写，少解释背景，多让画面和反应自己成立。",
+        "sentence_shape": "每句话绑定当前高光段落内的一个可见动作、停顿、表情、台词或压迫感，不扩散到全篇剧情。",
+        "opening_rotation": [
+          "高光动作",
+          "压迫沉默",
+          "关键台词",
+          "对峙瞬间",
+          "反应定格",
+          "段落冲突"
+        ],
+        "transition_bank": [
+          "这段最精彩的地方",
+          "镜头不要急着跳走",
+          "真正的压迫感在这里",
+          "注意他的反应",
+          "接下来这一秒",
+          "这一段的重点不是背景"
+        ],
+        "ip_masking": "除非用户明确要求保留，否则公开视频台本默认把作品名、系列名、角色正式名和强识别专有名替换成角色身份、关系、外貌、职业或剧情功能称呼，例如少年、对手、她的同伴、持刀的人、沉默的男人、那个孩子。",
+        "forbidden_patterns": [
+          "为了讲完整剧情拉走高光段落",
+          "过度解释前因后果",
+          "把连续段落切成碎片式解说",
+          "忽略沉默、停顿和反应的张力",
+          "未被要求时直接暴露 IP 或正式角色名"
+        ],
+        "example_lines": [
+          "这段最精彩的地方，不是他冲了上去，而是对方站在原地一动不动。",
+          "镜头不要急着跳走，因为真正的压迫感就在这几秒沉默里。",
+          "先看这一刀落下前，所有人的反应。",
+          "对手没有立刻反击，只是慢慢抬起了头。",
+          "这一段不需要解释太多，光是两个人的站位就已经说明了局势。"
+        ],
+        "bad_good_examples": [
+          {
+            "bad": "我们先讲完整件事的来龙去脉。",
+            "good": "先看这一刀落下前，所有人的反应。"
+          },
+          {
+            "bad": "接下来跳到另一段更刺激的地方。",
+            "good": "镜头继续留在这里，因为对手还没有做出反应。"
+          },
+          {
+            "bad": "这个段落说明主角从小就很努力。",
+            "good": "这一秒，他没有解释，只是把断掉的刀重新握紧。"
+          }
+        ]
       },
       "shot_mapping_rules": {
         "cold_open": "use only chronological footage from the selected highlight segment; do not pull a later climax forward",

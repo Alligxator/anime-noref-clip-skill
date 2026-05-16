@@ -67,6 +67,20 @@ def main() -> int:
     if "style" not in help_result.stdout:
         raise AssertionError("--gate style is missing from validate_workflow_state.py --help")
 
+    story_styles = json.loads((SKILL_ROOT / "references" / "story_styles.json").read_text(encoding="utf-8"))
+    required_guide_keys = {"tone", "opening_rotation", "example_lines", "bad_good_examples"}
+    for style_id, style in story_styles["styles"].items():
+        guide = style.get("script_style_guide")
+        if not isinstance(guide, dict):
+            raise AssertionError(f"{style_id} missing script_style_guide")
+        missing = required_guide_keys - set(guide)
+        if missing:
+            raise AssertionError(f"{style_id} script_style_guide missing keys: {sorted(missing)}")
+        if not guide.get("example_lines"):
+            raise AssertionError(f"{style_id} script_style_guide.example_lines must be non-empty")
+        if not guide.get("bad_good_examples"):
+            raise AssertionError(f"{style_id} script_style_guide.bad_good_examples must be non-empty")
+
     natural = json.loads(run_python("scripts/resolve_story_style.py", "--style", "natural").stdout)
     if natural["story_style"] != "style_02_natural_plot_explanation":
         raise AssertionError("natural alias did not resolve to style_02_natural_plot_explanation")
