@@ -4,11 +4,13 @@ Use this reference after full-script TTS and after `tools/build_tts_boundary_tab
 
 Production subtitle planning uses a three-stage flow:
 
-1. The project script builds `subtitles/tts_boundary_table.json` from real TTS `WordBoundary` metadata.
+1. The project script builds `subtitles/tts_boundary_table.json` from real AI-tts boundary metadata, preferring raw AssemblyAI word boundaries and using AssemblyAI segment boundaries only when word boundaries are unavailable.
 2. A Codex subagent groups contiguous boundary ids into readable subtitle cues.
 3. `tools/build_post_tts_alignment_v145.py` validates the groups and uses the exact boundary times to write ASS subtitles.
 
-The subagent does not listen to audio and must not assign timestamps. It only groups already-timed TTS boundaries.
+The subagent does not listen to audio and must not assign timestamps. It owns semantic grouping only: choose readable contiguous boundary ranges from already-timed TTS boundaries. The local script must not rewrite, re-split, or repair semantic cue text; it only attaches timing and rejects invalid grouping.
+
+After the cue plan is collected or rejected, call `close_agent` for the subagent before continuing to alignment, render, or row completion.
 
 Input to the subagent:
 
@@ -78,8 +80,10 @@ Rules:
 - Preserve every narration character represented in the TTS boundaries after normalization. Do not summarize, rewrite, translate, add text, or delete text.
 - Strip display-only trailing punctuation from cue text, but keep `source_text` unchanged.
 - Chinese: prefer complete semantic chunks around 6-14 characters, with 4-16 allowed when timing/readability requires it. Do not split particles, complements, or fixed phrases away from their head.
+- Chinese: do not split inside natural words or fixed chunks. Invalid examples include `两个 / 人`, `已经不 / 对`, `已经不 / 准备`, `起不 / 来`, `浅发 / 男人`, `金发 / 男人`, `求救 / 声`, `白色 / 装置`, `台 / 面上`, `放我 / 出去`, `蓝白色 / 星体`, and `一 / 招`.
 - Thai: group natural phrase/word boundary ranges. Do not hard-slice by character count.
 - English: group natural phrase boundary ranges and avoid orphan words.
 - Avoid cues that will read as flashes; merge tiny fragments with neighboring boundaries unless the source line itself is intentionally abrupt.
 - Do not create a cue that crosses original sentence boundaries unless a deliberate continuation is documented.
+- If the alignment script reports computed `bad_line_break_count > 0`, do not use a local rule-based repair as the production result. Regenerate `semantic_cue_plan.json` with the subagent and close that subagent after collecting the revised plan.
 - Return JSON only.

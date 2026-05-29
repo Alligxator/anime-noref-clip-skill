@@ -620,10 +620,10 @@
         "max_nonlinear_exceptions": 0,
         "target_duration_sec": 60,
         "script_density": "medium_low",
-        "shot_energy": "highlight_continuity_first",
+        "shot_energy": "highlight_edit_plan_first",
         "cold_open_max_sec": 4,
         "cold_open_allow_nonlinear": false,
-        "post_hook_main_path": "single_or_adjacent_contiguous_source_blocks",
+        "post_hook_main_path": "highlight_edit_plan_multi_beat_source_window",
         "post_hook_min_shot_duration": 1.5,
         "dialogue_scene_min_shot_duration": 1.8,
         "target_shot_count_60s": [
@@ -644,13 +644,19 @@
         ],
         "clone_padding_policy": "no_clone_padding_except_final_2_frames",
         "alignment_solve_order": "shot_count_then_speed",
-        "cold_open_policy": "chronological_highlight_segment_only"
+        "cold_open_policy": "chronological_highlight_segment_only",
+        "highlight_edit_plan_required": true
       },
       "selection_bias": [
+        "novel visual premise",
+        "strong reversal",
         "action",
         "emotional outburst",
         "famous dialogue",
         "strong reaction",
+        "first 3 second hook capacity",
+        "multi-beat edit capacity",
+        "source-window duration capacity",
         "watchable high-conflict segment",
         "visual impact",
         "clear cause and effect"
@@ -658,7 +664,8 @@
       "avoid": [
         "long setup",
         "background explanation",
-        "fragmented jump cutting",
+        "single-shot thinking when the window needs multiple visible beats",
+        "fragmented jump cutting outside the chosen highlight window",
         "over-explaining",
         "unrelated filler shots",
         "breaking chronology only for stimulation"
@@ -720,8 +727,8 @@
       },
       "shot_mapping_rules": {
         "cold_open": "use only chronological footage from the selected highlight segment; do not pull a later climax forward",
-        "body": "prefer one contiguous source block; use adjacent blocks only when needed to complete the highlight beat",
-        "unit_binding": "bind each narration unit to a small contiguous window inside the same highlight segment",
+        "body": "build a highlight edit plan with several visible beats inside the selected longer source window; use adjacent same-scene blocks when that makes the hook, reversal, rehook, and payoff more watchable",
+        "unit_binding": "bind each narration unit to the visible beat it describes, allowing multiple shots inside the same highlight window instead of treating the window as one shot",
         "replacement": "prefer adjacent same-segment shots with the same action or emotional function",
         "large_jumps": "disallow by default; use only natural segment transitions with recorded reasons"
       },
@@ -739,6 +746,7 @@
         ],
         "post_hook_min_shot_duration_sec": 1.5,
         "dialogue_scene_min_shot_duration_sec": 1.8,
+        "highlight_edit_plan_required": true,
         "post_hook_contiguous_source_blocks": true,
         "unique_shots": true,
         "op_ed_overlap_count": 0

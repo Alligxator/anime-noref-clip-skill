@@ -14,8 +14,28 @@ SCHEMA_VERSION = "anime-noref-clip.post_tts_alignment.v1.4.9"
 SUBTITLE_PLAN_SCHEMA_VERSION = "anime-noref-clip.semantic_cue_plan.v1.4.9"
 BOUNDARY_TABLE_SCHEMA_VERSION = "anime-noref-clip.tts_boundary_table.v1.4.9"
 BOUNDARY_GROUP_SOURCE = "subagent_boundary_group_plan"
-LEGACY_TEXT_PLAN_SOURCE = "subagent_semantic_cue_plan"
 RENDER_BOUNDARY_POLICY = "real_scene_cut_only_no_duration_based_render_splits"
+CJK_BAD_BOUNDARY_PAIRS = (
+    ("两个", "人"),
+    ("一个", "人"),
+    ("已经不", "对"),
+    ("已经不", "准备"),
+    ("起不", "来"),
+    ("浅发", "男人"),
+    ("黑发", "男人"),
+    ("金发", "男人"),
+    ("红发", "男人"),
+    ("求救", "声"),
+    ("白色", "装置"),
+    ("台", "面上"),
+    ("货装", "上"),
+    ("指节用力已经不", "准备"),
+    ("放我", "出去"),
+    ("让我", "出去"),
+    ("接", "一遍"),
+    ("蓝白色", "星体"),
+    ("一", "招"),
+)
 
 
 def resolve_project_path(root: Path, value: str | Path) -> Path:
@@ -57,6 +77,21 @@ def strip_display(text: str) -> str:
 
 def normalize_text(text: str) -> str:
     return re.sub(r"[\s，。！？、；：,.!?;:：]+", "", text or "")
+
+
+def contains_cjk(text: str) -> bool:
+    return any("\u4e00" <= ch <= "\u9fff" for ch in text)
+
+
+def bad_cjk_boundary_reason(left: str, right: str) -> str:
+    left_norm = normalize_text(left)
+    right_norm = normalize_text(right)
+    if not contains_cjk(left_norm + right_norm):
+        return ""
+    for left_suffix, right_prefix in CJK_BAD_BOUNDARY_PAIRS:
+        if left_norm.endswith(left_suffix) and right_norm.startswith(right_prefix):
+            return f"{left_suffix}/{right_prefix}"
+    return ""
 
 
 def wrap_ass_text(text: str, max_line_chars: int = 18) -> str:
@@ -125,91 +160,6 @@ def allocate_frames(total_frames: int, shots: list[dict], fps: Fraction, min_spe
     return assigned
 
 
-def preferred_chunk_chars(language: str) -> int:
-    if language.startswith("zh"):
-        return 14
-    if language.startswith("th"):
-        return 24
-    return 42
-
-
-def split_long_chunk(text: str, max_chars: int) -> list[str]:
-    text = strip_display(text)
-    if len(text) <= max_chars:
-        return [text] if text else []
-    if " " in text:
-        chunks: list[str] = []
-        current: list[str] = []
-        for word in text.split():
-            candidate = " ".join(current + [word])
-            if current and len(candidate) > max_chars:
-                chunks.append(" ".join(current))
-                current = [word]
-            else:
-                current.append(word)
-        if current:
-            chunks.append(" ".join(current))
-        return chunks
-
-    chunks = []
-    cursor = 0
-    while cursor < len(text):
-        remaining = len(text) - cursor
-        if remaining <= max_chars:
-            chunks.append(text[cursor:])
-            break
-        cut = cursor + max_chars
-        search_start = max(cursor + max_chars // 2, cursor + 1)
-        for index in range(cut, search_start - 1, -1):
-            if text[index - 1:index] in ("，", "、", "：", "；", ",", ";", ":"):
-                cut = index
-                break
-        chunks.append(strip_display(text[cursor:cut]))
-        cursor = cut
-    return [chunk for chunk in chunks if chunk]
-
-
-def split_semantic_chunks(text: str, language: str) -> list[str]:
-    max_chars = preferred_chunk_chars(language)
-    chunks: list[str] = []
-    current: list[str] = []
-    for char in strip_display(text):
-        current.append(char)
-        if char in "，、；：,;:。！？!?.":
-            chunks.extend(split_long_chunk("".join(current), max_chars))
-            current = []
-    if current:
-        chunks.extend(split_long_chunk("".join(current), max_chars))
-
-    merged: list[str] = []
-    for chunk in chunks:
-        chunk = strip_display(chunk)
-        if not chunk:
-            continue
-        if merged and len(normalize_text(chunk)) <= 2:
-            merged[-1] = strip_display(merged[-1] + chunk)
-        else:
-            merged.append(chunk)
-    return merged or ([strip_display(text)] if strip_display(text) else [])
-
-
-def coerce_chunk_texts(value) -> list[str]:
-    if isinstance(value, list):
-        chunks: list[str] = []
-        for item in value:
-            if isinstance(item, str):
-                text = item
-            elif isinstance(item, dict):
-                text = str(item.get("text", ""))
-            else:
-                text = ""
-            text = strip_display(text)
-            if text:
-                chunks.append(text)
-        return chunks
-    return []
-
-
 def as_int(value, default: int | None = None) -> int | None:
     try:
         return int(value)
@@ -217,16 +167,35 @@ def as_int(value, default: int | None = None) -> int | None:
         return default
 
 
+def boundary_start(boundary: dict, fallback: float) -> float:
+    return float(boundary.get("start", boundary.get("offset", fallback)))
+
+
+def unit_real_boundaries(unit: dict) -> tuple[list[dict], str]:
+    if unit.get("word_boundaries"):
+        boundaries = unit.get("word_boundaries", [])
+        sources = {str(boundary.get("source", "")) for boundary in boundaries}
+        if sources == {"assemblyai_word_boundary"}:
+            return boundaries, "assemblyai_word_boundary"
+        if "assemblyai_word_boundary" in sources:
+            return boundaries, "mixed_word_boundary"
+        return boundaries, "provider_word_boundary"
+    if unit.get("segment_boundaries"):
+        return unit.get("segment_boundaries", []), "assemblyai_segment_boundary"
+    return [], "no_real_boundaries"
+
+
 def build_unit_boundary_entries(unit: dict) -> list[dict]:
     unit_start = float(unit["timeline_start"])
     unit_end = float(unit["timeline_end"])
     entries: list[dict] = []
     normalized_cursor = 0
-    for bid, boundary in enumerate(unit.get("word_boundaries", [])):
+    real_boundaries, _ = unit_real_boundaries(unit)
+    for bid, boundary in enumerate(real_boundaries):
         raw_text = strip_display(str(boundary.get("text", "")))
         normalized = normalize_text(raw_text)
-        raw_start = float(boundary.get("offset", unit_start))
-        raw_end = boundary_end(boundary)
+        raw_start = boundary_start(boundary, unit_start)
+        raw_end = float(boundary["end"]) if "end" in boundary else boundary_end(boundary)
         if unit_start > 0 and raw_end <= unit_start:
             raw_start += unit_start
             raw_end += unit_start
@@ -253,8 +222,12 @@ def build_unit_boundary_entries(unit: dict) -> list[dict]:
 def build_boundary_table(tts_units: list[dict], language: str) -> dict:
     units = []
     total_boundaries = 0
+    timing_sources: set[str] = set()
     for unit in tts_units:
         entries = build_unit_boundary_entries(unit)
+        _, timing_source = unit_real_boundaries(unit)
+        if entries:
+            timing_sources.add(timing_source)
         total_boundaries += len(entries)
         units.append(
             {
@@ -268,12 +241,20 @@ def build_boundary_table(tts_units: list[dict], language: str) -> dict:
                 "boundaries": entries,
             }
         )
+    timing_source = (
+        timing_sources.pop()
+        if len(timing_sources) == 1
+        else "mixed_real_tts_boundaries"
+        if timing_sources
+        else "no_real_boundaries"
+    )
     return {
         "schema_version": BOUNDARY_TABLE_SCHEMA_VERSION,
         "language": language,
-        "timing_source": "edge_tts_word_boundary" if total_boundaries else "no_word_boundaries",
+        "timing_source": timing_source,
         "unit_count": len(units),
         "word_boundary_count": total_boundaries,
+        "real_boundary_count": total_boundaries,
         "units": units,
         "passes": total_boundaries > 0 and all(unit["boundary_count"] > 0 for unit in units),
     }
@@ -285,7 +266,6 @@ def boundary_units_by_id(boundary_table: dict) -> dict[int, dict]:
 
 def load_subtitle_plan(path: Path) -> dict:
     plan = load_json(path)
-    unit_chunks: dict[int, list[str]] = {}
     unit_boundary_groups: dict[int, list[dict]] = {}
     units = plan.get("units", [])
     if isinstance(units, list):
@@ -312,13 +292,9 @@ def load_subtitle_plan(path: Path) -> dict:
                         )
             if boundary_groups:
                 unit_boundary_groups[unit_id] = boundary_groups
-            chunks = coerce_chunk_texts(unit.get("chunks") or unit.get("cues"))
-            if chunks:
-                unit_chunks[unit_id] = chunks
 
     cues = plan.get("cues", [])
     if isinstance(cues, list):
-        grouped: dict[int, list[str]] = {}
         boundary_grouped: dict[int, list[dict]] = {}
         for cue in cues:
             if not isinstance(cue, dict) or "unit_id" not in cue:
@@ -331,32 +307,17 @@ def load_subtitle_plan(path: Path) -> dict:
                 boundary_grouped.setdefault(unit_id, []).append(
                     {"text": text, "boundary_start": start, "boundary_end": end}
                 )
-            elif text:
-                grouped.setdefault(unit_id, []).append(text)
         unit_boundary_groups.update(
             {unit_id: groups for unit_id, groups in boundary_grouped.items() if groups}
         )
-        unit_chunks.update({unit_id: chunks for unit_id, chunks in grouped.items() if chunks})
 
     return {
         "path": path.as_posix(),
         "raw": plan,
-        "unit_chunks": unit_chunks,
         "unit_boundary_groups": unit_boundary_groups,
         "has_boundary_groups": bool(unit_boundary_groups),
         "checks": plan.get("checks", {}) if isinstance(plan.get("checks"), dict) else {},
     }
-
-
-def chunks_for_unit(unit: dict, language: str, subtitle_plan: dict | None) -> tuple[list[str], str, int]:
-    if subtitle_plan:
-        chunks = subtitle_plan["unit_chunks"].get(int(unit["unit_id"]), [])
-        if chunks:
-            joined = normalize_text("".join(chunks))
-            expected = normalize_text(unit["text"])
-            mismatch = 0 if joined == expected else 1
-            return chunks, LEGACY_TEXT_PLAN_SOURCE, mismatch
-    return split_semantic_chunks(unit["text"], language), "local_rule_fallback", 0
 
 
 def boundary_end(boundary: dict) -> float:
@@ -404,19 +365,20 @@ def build_subtitle_cues(
     max_duration: float = 2.2,
 ) -> tuple[list[dict], dict]:
     boundary_table = boundary_table or build_boundary_table(tts_units, language)
+    boundary_timing_source = str(boundary_table.get("timing_source") or "real_tts_boundary")
     boundary_units = boundary_units_by_id(boundary_table)
     cues: list[dict] = []
-    fallback_count = 0
     orphan_fragment_count = 0
+    computed_bad_line_breaks: list[dict] = []
     boundary_group_plan_units_used = 0
-    subagent_plan_units_used = 0
-    local_rule_units_used = 0
     subtitle_plan_mismatch_count = 0
     boundary_group_mismatch_count = 0
     boundary_group_gap_count = 0
     boundary_group_overlap_count = 0
     boundary_group_uncovered_count = 0
     boundary_group_duration_violation_count = 0
+    if require_boundary_plan and not subtitle_plan:
+        raise RuntimeError("subtitle boundary-group plan is required")
 
     for unit in tts_units:
         unit_id = int(unit["unit_id"])
@@ -427,179 +389,101 @@ def build_subtitle_cues(
             if subtitle_plan
             else []
         )
-        unit_start = float(unit["timeline_start"])
         unit_end = float(unit["timeline_end"])
-
-        if boundary_groups:
-            boundary_group_plan_units_used += 1
-            subagent_plan_units_used += 1
-            cursor = 0
-            unit_cue_texts: list[str] = []
-            for cue_spec in boundary_groups:
-                start_idx = int(cue_spec["boundary_start"])
-                end_idx = int(cue_spec["boundary_end"])
-                if start_idx > cursor:
-                    boundary_group_gap_count += start_idx - cursor
-                if start_idx < cursor:
-                    boundary_group_overlap_count += cursor - start_idx
-                if start_idx < 0 or end_idx <= start_idx or end_idx > len(boundary_entries):
-                    boundary_group_mismatch_count += 1
-                    cursor = max(cursor, end_idx)
-                    continue
-
-                selected = boundary_entries[start_idx:end_idx]
-                boundary_text = strip_display("".join(item["text"] for item in selected))
-                cue_text = strip_display(cue_spec.get("text") or boundary_text)
-                if normalize_text(cue_text) != normalize_text(boundary_text):
-                    boundary_group_mismatch_count += 1
-                unit_cue_texts.append(cue_text)
-                orphan_fragment_count += 1 if len(normalize_text(cue_text)) <= 2 else 0
-
-                start = float(selected[0]["start"])
-                end = float(selected[-1]["end"])
-                duration = end - start
-                if duration < min_duration or duration > max_duration:
-                    boundary_group_duration_violation_count += 1
-                cue = build_cue(
-                    unit_id,
-                    cue_text,
-                    start,
-                    end,
-                    unit_end,
-                    min_duration=min_duration,
-                    max_duration=max_duration,
-                    timing_source="edge_tts_word_boundary",
-                    enforce_duration_limits=False,
-                )
-                cue.update(
-                    {
-                        "segmentation_source": BOUNDARY_GROUP_SOURCE,
-                        "boundary_start": start_idx,
-                        "boundary_end": end_idx,
-                        "boundary_ids": [item["bid"] for item in selected],
-                    }
-                )
-                cues.append(cue)
-                cursor = end_idx
-
-            if cursor < len(boundary_entries):
-                boundary_group_uncovered_count += len(boundary_entries) - cursor
-            if normalize_text("".join(unit_cue_texts)) != normalize_text(unit["text"]):
-                subtitle_plan_mismatch_count += 1
-            continue
-
-        if require_boundary_plan:
+        if not boundary_entries:
+            raise RuntimeError(f"real TTS boundary table missing boundaries for unit {unit_id}")
+        if not boundary_groups:
             raise RuntimeError(f"subtitle boundary-group plan missing for unit {unit_id}")
 
-        chunks, chunk_source, mismatch_count = chunks_for_unit(unit, language, subtitle_plan)
-        subtitle_plan_mismatch_count += mismatch_count
-        if chunk_source == LEGACY_TEXT_PLAN_SOURCE:
-            subagent_plan_units_used += 1
-        else:
-            local_rule_units_used += 1
-        orphan_fragment_count += sum(1 for chunk in chunks if len(normalize_text(chunk)) <= 2)
-        if boundary_entries:
-            word_lengths = [max(1, len(item.get("normalized_text", ""))) for item in boundary_entries]
-            total_word_length = sum(word_lengths)
-            total_chunk_length = sum(max(1, len(normalize_text(chunk))) for chunk in chunks)
-            cursor = 0
-            consumed_word_length = 0
-            consumed_chunk_length = 0
-            for index, chunk in enumerate(chunks):
-                start_cursor = min(cursor, len(boundary_entries) - 1)
-                if index == len(chunks) - 1:
-                    cursor = len(boundary_entries)
-                else:
-                    consumed_chunk_length += max(1, len(normalize_text(chunk)))
-                    target_word_length = total_word_length * consumed_chunk_length / max(1, total_chunk_length)
-                    while cursor < len(boundary_entries) - (len(chunks) - index - 1) and consumed_word_length < target_word_length:
-                        consumed_word_length += word_lengths[cursor]
-                        cursor += 1
-                    cursor = max(cursor, start_cursor + 1)
-                end_cursor = max(start_cursor + 1, min(cursor, len(boundary_entries)))
-                start = max(unit_start, float(boundary_entries[start_cursor]["start"]))
-                end = min(unit_end, float(boundary_entries[end_cursor - 1]["end"]))
-                cue = build_cue(
-                    unit_id,
-                    chunk,
-                    start,
-                    end,
-                    unit_end,
-                    min_duration=min_duration,
-                    max_duration=max_duration,
-                    timing_source="edge_tts_word_boundary",
-                )
-                cue.update(
-                    {
-                        "segmentation_source": chunk_source,
-                        "boundary_start": start_cursor,
-                        "boundary_end": end_cursor,
-                        "boundary_ids": [item["bid"] for item in boundary_entries[start_cursor:end_cursor]],
-                    }
-                )
-                cues.append(cue)
-                cursor = end_cursor
-        else:
-            fallback_count += len(chunks)
-            unit_duration = max(min_duration, unit_end - unit_start)
-            weights = [max(1, len(normalize_text(chunk))) for chunk in chunks]
-            total_weight = sum(weights)
-            cursor_time = unit_start
-            for index, (chunk, weight) in enumerate(zip(chunks, weights)):
-                if index == len(chunks) - 1:
-                    end = unit_end
-                else:
-                    end = cursor_time + unit_duration * weight / total_weight
-                cue = build_cue(
-                    unit_id,
-                    chunk,
-                    cursor_time,
-                    end,
-                    unit_end,
-                    min_duration=min_duration,
-                    max_duration=max_duration,
-                    timing_source="unit_timeline_proportional_fallback",
-                )
-                cue["segmentation_source"] = chunk_source
-                cues.append(cue)
-                cursor_time = end
+        boundary_group_plan_units_used += 1
+        cursor = 0
+        unit_cue_texts: list[str] = []
+        previous_cue: dict | None = None
+        for cue_spec in boundary_groups:
+            start_idx = int(cue_spec["boundary_start"])
+            end_idx = int(cue_spec["boundary_end"])
+            if start_idx > cursor:
+                boundary_group_gap_count += start_idx - cursor
+            if start_idx < cursor:
+                boundary_group_overlap_count += cursor - start_idx
+            if start_idx < 0 or end_idx <= start_idx or end_idx > len(boundary_entries):
+                boundary_group_mismatch_count += 1
+                cursor = max(cursor, end_idx)
+                continue
 
-    repaired: list[dict] = []
-    for cue in cues:
-        if cue.get("segmentation_source") == BOUNDARY_GROUP_SOURCE:
-            repaired.append(cue)
-            continue
-        if cue["duration"] >= min_duration:
-            repaired.append(cue)
-            continue
-        if repaired and repaired[-1]["unit_id"] == cue["unit_id"]:
-            previous = repaired[-1]
-            previous["end"] = cue["end"]
-            previous["text"] = strip_display(previous["text"] + cue["text"])
-            previous["duration"] = round(previous["end"] - previous["start"], 6)
-        else:
-            cue["end"] = round(cue["start"] + min_duration, 6)
-            cue["duration"] = round(min_duration, 6)
-            repaired.append(cue)
+            selected = boundary_entries[start_idx:end_idx]
+            boundary_text = strip_display("".join(item["text"] for item in selected))
+            cue_text = strip_display(cue_spec.get("text") or boundary_text)
+            if normalize_text(cue_text) != normalize_text(boundary_text):
+                boundary_group_mismatch_count += 1
+            unit_cue_texts.append(cue_text)
+            orphan_fragment_count += 1 if len(normalize_text(cue_text)) <= 2 else 0
+            if previous_cue:
+                bad_reason = bad_cjk_boundary_reason(previous_cue["text"], cue_text)
+                if bad_reason:
+                    computed_bad_line_breaks.append(
+                        {
+                            "unit_id": unit_id,
+                            "reason": bad_reason,
+                            "left_text": previous_cue["text"],
+                            "right_text": cue_text,
+                            "left_boundary": [
+                                previous_cue["boundary_start"],
+                                previous_cue["boundary_end"],
+                            ],
+                            "right_boundary": [start_idx, end_idx],
+                        }
+                    )
+
+            start = float(selected[0]["start"])
+            end = float(selected[-1]["end"])
+            duration = end - start
+            if duration < min_duration or duration > max_duration:
+                boundary_group_duration_violation_count += 1
+            cue = build_cue(
+                unit_id,
+                cue_text,
+                start,
+                end,
+                unit_end,
+                min_duration=min_duration,
+                max_duration=max_duration,
+                timing_source=boundary_timing_source,
+                enforce_duration_limits=False,
+            )
+            cue.update(
+                {
+                    "segmentation_source": BOUNDARY_GROUP_SOURCE,
+                    "boundary_start": start_idx,
+                    "boundary_end": end_idx,
+                    "boundary_ids": [item["bid"] for item in selected],
+                }
+            )
+            cues.append(cue)
+            previous_cue = {
+                "text": cue_text,
+                "boundary_start": start_idx,
+                "boundary_end": end_idx,
+            }
+            cursor = end_idx
+
+        if cursor < len(boundary_entries):
+            boundary_group_uncovered_count += len(boundary_entries) - cursor
+        if normalize_text("".join(unit_cue_texts)) != normalize_text(unit["text"]):
+            subtitle_plan_mismatch_count += 1
 
     plan_checks = (subtitle_plan or {}).get("checks", {})
+    plan_bad_line_break_count = int(plan_checks.get("bad_line_break_count", 0))
     meta = {
-        "timing_source": "edge_tts_word_boundary" if fallback_count == 0 else "mixed_word_boundary_with_unit_timeline_fallback",
-        "uses_real_tts_boundaries": fallback_count < len(cues),
+        "timing_source": boundary_timing_source,
+        "uses_real_tts_boundaries": True,
         "semantic_segmentation_done": True,
         "language_aware_segmentation": True,
-        "semantic_segmentation_source": (
-            BOUNDARY_GROUP_SOURCE
-            if boundary_group_plan_units_used
-            else LEGACY_TEXT_PLAN_SOURCE
-            if subagent_plan_units_used
-            else "local_rule_fallback"
-        ),
-        "subagent_semantic_segmentation_done": bool(subagent_plan_units_used),
-        "subagent_plan_units_used": subagent_plan_units_used,
+        "semantic_segmentation_source": BOUNDARY_GROUP_SOURCE,
+        "subagent_semantic_segmentation_done": True,
+        "subagent_plan_units_used": boundary_group_plan_units_used,
         "subagent_boundary_group_plan_done": bool(boundary_group_plan_units_used),
         "boundary_group_plan_units_used": boundary_group_plan_units_used,
-        "local_rule_units_used": local_rule_units_used,
         "subtitle_plan_mismatch_count": subtitle_plan_mismatch_count,
         "boundary_group_mismatch_count": boundary_group_mismatch_count,
         "boundary_group_gap_count": boundary_group_gap_count,
@@ -607,12 +491,14 @@ def build_subtitle_cues(
         "boundary_group_uncovered_count": boundary_group_uncovered_count,
         "boundary_group_duration_violation_count": boundary_group_duration_violation_count,
         "subtitle_plan_path": subtitle_plan["path"] if subtitle_plan else "",
-        "fallback_cue_count": fallback_count,
         "cross_sentence_boundary_count": int(plan_checks.get("cross_sentence_boundary_count", 0)),
         "orphan_fragment_count": max(orphan_fragment_count, int(plan_checks.get("orphan_fragment_count", 0))),
-        "bad_line_break_count": int(plan_checks.get("bad_line_break_count", 0)),
+        "bad_line_break_count": max(plan_bad_line_break_count, len(computed_bad_line_breaks)),
+        "plan_bad_line_break_count": plan_bad_line_break_count,
+        "computed_bad_line_break_count": len(computed_bad_line_breaks),
+        "bad_line_break_examples": computed_bad_line_breaks[:20],
     }
-    return repaired, meta
+    return cues, meta
 
 
 def build_ass(cues: list[dict]) -> str:
@@ -643,7 +529,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     return "".join(lines)
 
 
-def load_optional_json(path: Path) -> dict:
+def load_json_if_exists(path: Path) -> dict:
     return load_json(path) if path.exists() else {}
 
 
@@ -739,7 +625,7 @@ def main() -> int:
     fps = Fraction(args.fps_num, args.fps_den)
     script = load_json(resolve_project_path(root, args.script))
     final_shots = load_json(resolve_project_path(root, args.final_shots))
-    workflow_state = load_optional_json(resolve_project_path(root, args.workflow_state)) if args.workflow_state else {}
+    workflow_state = load_json_if_exists(resolve_project_path(root, args.workflow_state)) if args.workflow_state else {}
     tts_dir = resolve_project_path(root, args.tts_dir)
     tts_path = resolve_project_path(root, args.tts_durations) if args.tts_durations else tts_dir / "tts_durations.json"
     boundaries_path = (
@@ -758,7 +644,7 @@ def main() -> int:
     elif args.require_subtitle_plan:
         raise RuntimeError(f"missing required subtitle semantic cue plan: {subtitle_plan_path}")
     tts = load_json(tts_path)
-    boundaries = load_optional_json(boundaries_path)
+    boundaries = load_json_if_exists(boundaries_path)
     if not boundaries:
         boundaries = {
             "word_boundaries": tts.get("word_boundaries", []),
@@ -928,6 +814,7 @@ def main() -> int:
         and cue_meta["boundary_group_overlap_count"] == 0
         and cue_meta["boundary_group_uncovered_count"] == 0
         and cue_meta["boundary_group_duration_violation_count"] == 0
+        and cue_meta["bad_line_break_count"] == 0
     )
     if args.require_subtitle_plan:
         subtitle_plan_passed = subtitle_plan_passed and cue_meta["semantic_segmentation_source"] == BOUNDARY_GROUP_SOURCE
@@ -965,13 +852,7 @@ def main() -> int:
         "schema_version": SCHEMA_VERSION,
         "language": language,
         "timing_source": cue_meta["timing_source"],
-        "cue_strategy": (
-            "subagent groups TTS boundary ids, then script attaches exact boundary timing"
-            if cue_meta["semantic_segmentation_source"] == BOUNDARY_GROUP_SOURCE
-            else "legacy subagent text chunks attached to real TTS boundaries"
-            if cue_meta["semantic_segmentation_source"] == LEGACY_TEXT_PLAN_SOURCE
-            else "local rule semantic chunks attached to real TTS boundaries"
-        ),
+        "cue_strategy": "subagent groups TTS boundary ids, then script attaches exact boundary timing",
         "cue_count": len(cues),
         "max_cue_duration_sec": round(max(cue["duration"] for cue in cues), 6),
         "min_cue_duration_sec": round(min(cue["duration"] for cue in cues), 6),
@@ -986,7 +867,6 @@ def main() -> int:
         "subagent_plan_units_used": cue_meta["subagent_plan_units_used"],
         "subagent_boundary_group_plan_done": cue_meta["subagent_boundary_group_plan_done"],
         "boundary_group_plan_units_used": cue_meta["boundary_group_plan_units_used"],
-        "local_rule_units_used": cue_meta["local_rule_units_used"],
         "boundary_table_path": display_project_path(root, boundary_table_path) if boundary_table_path else "",
         "subtitle_plan_path": display_project_path(root, cue_meta["subtitle_plan_path"]) if cue_meta["subtitle_plan_path"] else "",
         "subtitle_plan_mismatch_count": cue_meta["subtitle_plan_mismatch_count"],
@@ -999,7 +879,9 @@ def main() -> int:
         "cross_sentence_boundary_count": cue_meta["cross_sentence_boundary_count"],
         "orphan_fragment_count": cue_meta["orphan_fragment_count"],
         "bad_line_break_count": cue_meta["bad_line_break_count"],
-        "fallback_cue_count": cue_meta["fallback_cue_count"],
+        "plan_bad_line_break_count": cue_meta["plan_bad_line_break_count"],
+        "computed_bad_line_break_count": cue_meta["computed_bad_line_break_count"],
+        "bad_line_break_examples": cue_meta["bad_line_break_examples"],
         "subtitle_position_basis": "foreground_box",
         "subtitle_box_inside_foreground": True,
     }

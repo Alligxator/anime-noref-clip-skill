@@ -2,6 +2,7 @@
   "schema_version": "anime-noref-clip.workflow_defaults.v1.4.13",
   "decision_defaults": {
     "source_buffer_policy": "stable_subwindow_only_no_cross_cut_tail_buffer",
-    "ip_reference_policy": "hide_ip_names_unless_user_explicitly_requests"
+    "ip_reference_policy": "hide_ip_names_unless_user_explicitly_requests",
+    "tts_speed": 1.2
   }
 }

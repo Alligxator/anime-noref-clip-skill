@@ -33,8 +33,28 @@ def normalize_text(text: str) -> str:
     return re.sub(r"[\s，。！？、；：,.!?;:：]+", "", text or "")
 
 
-def boundary_end(boundary: dict) -> float:
-    return float(boundary.get("offset", 0.0)) + float(boundary.get("duration", 0.0))
+def boundary_start(boundary: dict, fallback: float) -> float:
+    return float(boundary.get("start", boundary.get("offset", fallback)))
+
+
+def boundary_end(boundary: dict, fallback: float) -> float:
+    if "end" in boundary:
+        return float(boundary["end"])
+    return boundary_start(boundary, fallback) + float(boundary.get("duration", 0.0))
+
+
+def unit_real_boundaries(unit: dict) -> tuple[list[dict], str]:
+    if unit.get("word_boundaries"):
+        boundaries = unit.get("word_boundaries", [])
+        sources = {str(boundary.get("source", "")) for boundary in boundaries}
+        if sources == {"assemblyai_word_boundary"}:
+            return boundaries, "assemblyai_word_boundary"
+        if "assemblyai_word_boundary" in sources:
+            return boundaries, "mixed_word_boundary"
+        return boundaries, "provider_word_boundary"
+    if unit.get("segment_boundaries"):
+        return unit.get("segment_boundaries", []), "assemblyai_segment_boundary"
+    return [], "no_real_boundaries"
 
 
 def build_unit_boundary_entries(unit: dict) -> list[dict]:
@@ -42,11 +62,12 @@ def build_unit_boundary_entries(unit: dict) -> list[dict]:
     unit_end = float(unit["timeline_end"])
     entries: list[dict] = []
     normalized_cursor = 0
-    for bid, boundary in enumerate(unit.get("word_boundaries", [])):
+    real_boundaries, _ = unit_real_boundaries(unit)
+    for bid, boundary in enumerate(real_boundaries):
         raw_text = strip_display(str(boundary.get("text", "")))
         normalized = normalize_text(raw_text)
-        raw_start = float(boundary.get("offset", unit_start))
-        raw_end = boundary_end(boundary)
+        raw_start = boundary_start(boundary, unit_start)
+        raw_end = boundary_end(boundary, unit_start)
         if unit_start > 0 and raw_end <= unit_start:
             raw_start += unit_start
             raw_end += unit_start
@@ -74,8 +95,12 @@ def build_boundary_table(tts: dict, language: str) -> dict:
     units = []
     total_boundaries = 0
     mismatch_units = 0
+    timing_sources: set[str] = set()
     for unit in tts["units"]:
         entries = build_unit_boundary_entries(unit)
+        _, timing_source = unit_real_boundaries(unit)
+        if entries:
+            timing_sources.add(timing_source)
         normalized_boundary_text = "".join(item["normalized_text"] for item in entries)
         normalized_source_text = normalize_text(unit["text"])
         if normalized_boundary_text and normalized_boundary_text != normalized_source_text:
@@ -93,12 +118,20 @@ def build_boundary_table(tts: dict, language: str) -> dict:
                 "boundaries": entries,
             }
         )
+    timing_source = (
+        timing_sources.pop()
+        if len(timing_sources) == 1
+        else "mixed_real_tts_boundaries"
+        if timing_sources
+        else "no_real_boundaries"
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "language": language,
-        "timing_source": "edge_tts_word_boundary" if total_boundaries else "no_word_boundaries",
+        "timing_source": timing_source,
         "unit_count": len(units),
         "word_boundary_count": total_boundaries,
+        "real_boundary_count": total_boundaries,
         "boundary_text_mismatch_units": mismatch_units,
         "units": units,
         "passes": total_boundaries > 0
@@ -109,7 +142,7 @@ def build_boundary_table(tts: dict, language: str) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build a TTS WordBoundary table for subagent subtitle cue grouping."
+        description="Build a real TTS boundary table for subagent subtitle cue grouping."
     )
     parser.add_argument("--project-root", type=Path, required=True)
     parser.add_argument("--tts-durations", default="tts/tts_durations.json")

@@ -6,11 +6,11 @@ defaults, and creative QC profile. It does not override hard production gates:
 source support, GPT visual tagging, no invented plot, full-script TTS, real TTS
 subtitle timing, frame-quantized alignment, layout QA, and delivery QA still apply.
 
-## v1.4.14 Machine-Readable Config
+## Machine-Readable Config
 
 `story_styles.json` is the canonical preset source. Keep this Markdown file aligned with that JSON, or regenerate it from the JSON when adding styles. Validate changes with:
 
-The current schema version is `anime-noref-clip.story_styles.v1.4.14`. v1.4.14 keeps the four existing preset intents unchanged, but upgrades schema readability and requires each preset to provide non-empty `script_rules` and `shot_mapping_rules` subfields.
+The current schema version is `anime-noref-clip.story_styles.v1.4.14`. The schema version is separate from the skill version; skill v1.4.18 still uses this schema while adding workflow hard gates for TTS speed, calibrated pre-TTS duration estimates, visual-tag coverage, style 5 highlight edit plans, early story writing through `story_evidence_pack -> content-style-system initial_story_seed/story_atoms`, and row 11 sentence-source-map / plot-explanation review.
 
 ```bash
 python3 scripts/validate_story_styles.py
@@ -46,10 +46,12 @@ Record the resolved preset in `workflow_state.json`:
 }
 ```
 
-Project-specific duration, output aspect, language, TTS speed, BGM, and
-watermark settings may override a preset. If a creative default is changed, such
-as nonlinear teaser allowance, hook strategy, shot-count range, or post-hook
-pacing, record the reason in the review and QC artifacts.
+Project-specific duration, output aspect, language, BGM, and watermark settings
+may override production defaults when the user asks. TTS speed is not a style preset override; it is governed by the workflow hard gate and defaults to `1.2`
+unless `approvals.tts_speed_override=true` and a reason is recorded. If a
+creative default changes, such as nonlinear teaser allowance, hook strategy,
+shot-count range, or post-hook pacing, record the reason in the review and QC
+artifacts.
 
 ## Preset Schema
 
@@ -74,18 +76,18 @@ Full machine-readable definitions live in `story_styles.json`.
 - `style_02_natural_plot_explanation` / Natural Plot Explanation: calmer chronological recap, continuity-first shot selection, no nonlinear teaser by default, and 18-28 shots per 60 seconds.
 - `style_03_emotional_reversal` / Emotional Reversal: relationship or emotion-led edit, preserves reaction pauses, allows one reviewed emotional teaser, and targets 20-30 shots per 60 seconds.
 - `style_04_action_battle_escalation` / Action Battle Escalation: motion/impact-led battle or danger edit, allows reviewed impact teasers, and targets 28-42 shots per 60 seconds.
-- `style_05_highlight_segment_selection` / Highlight Segment Selection: continuity-first high-conflict highlight segment edit, forbids nonlinear teasers, uses medium-low narration density, and targets 18-26 shots per 60 seconds.
+- `style_05_highlight_segment_selection` / Highlight Segment Selection: high-conflict highlight-window edit, forbids nonlinear teasers, requires a multi-beat `highlight_edit_plan`, chooses longer stronger source windows when short windows underperform, uses medium-low narration density, and targets 18-26 shots per 60 seconds.
 - `style_06_spectacle_escalation_commentary` / Spectacle Escalation Commentary: rotating-hook spectacle, world-rule, and task-escalation commentary; allows at most one reviewed opening teaser and keeps the body chronological, targeting 22-34 shots per 60 seconds.
 
 ## Script Style Guide Reference
 
-Every preset has a machine-readable `script_style_guide` in `story_styles.json`. Use it when generating `script_variants.json` and final narration. These guides affect wording only; shot selection, pacing ranges, nonlinear policy, and creative QC still come from each preset's existing decision and mapping fields.
+Every preset has a machine-readable `script_style_guide` in `story_styles.json`. Use it when generating `script_variants.json` and as style-reference input for the row 11 `content-style-system` writing/review gate. These guides do not authorize `anime-noref-clip` to locally write the final script copy; the final script copy must pass through the writing skill. The guides affect wording only; shot selection, pacing ranges, nonlinear policy, and creative QC still come from each preset's existing decision and mapping fields.
 
 - `style_01`: high-conflict cold start. Example: "少年刚以为自己逃过一劫，门外的人已经举起了刀。"
 - `style_02`: calm causal explanation. Example: "事情要从这场误会开始说起。"
 - `style_03`: visible emotion and relationship reversal. Example: "她没有立刻回答，只是低头攥紧了手里的信。"
 - `style_04`: action threat, impact, and consequence. Example: "黑衣敌人刚冲上来，地面就被这一击砸出裂痕。"
-- `style_05`: single highlight segment tension. Example: "这段最精彩的地方，不是他冲了上去，而是对方站在原地一动不动。"
+- `style_05`: multi-beat highlight-window tension. Example: "这段最精彩的地方，不是他冲了上去，而是对方站在原地一动不动。"
 - `style_06`: spectacle, world-rule, and task escalation. Example: "这把还没开刃的菜刀，落地的一瞬间竟然把水泥地切出一道缝。"
 
 ## style_06_spectacle_escalation_commentary Reference
@@ -124,96 +126,9 @@ Bad -> Good references:
 - Bad: "这个大师强到无法想象。"
 - Good: "山下的妖兽追到屋前就停了下来，显然连它们都害怕这里的主人。"
 
-## style_01_aggressive_youtube_cold_start
+## Preset Detail Policy
 
-```json
-{
-  "preset_id": "style_01_aggressive_youtube_cold_start",
-  "label": "Aggressive YouTube Cold Start",
-  "aliases": [
-    "preset1",
-    "style1",
-    "cold_start",
-    "aggressive",
-    "youtube_retention",
-    "current_default"
-  ],
-  "use_when": [
-    "YouTube Shorts or similar cold traffic",
-    "the first seconds must create a strong reason to keep watching",
-    "the source has visible conflict, danger, confession, reversal, choice, consequence, or object clues"
-  ],
-  "decision_overlay": {
-    "retention_mode": "aggressive_youtube_cold_start",
-    "hook_strategy": "multi_hook_with_payoff",
-    "nonlinear_teaser_allowed": true,
-    "max_nonlinear_exceptions": 2,
-    "target_duration_sec": 60,
-    "script_density": "high",
-    "shot_energy": "aggressive_but_stable_after_hook",
-    "cold_open_max_sec": 5,
-    "cold_open_allow_nonlinear": true,
-    "post_hook_main_path": "contiguous_source_blocks",
-    "post_hook_min_shot_duration": 1.3,
-    "dialogue_scene_min_shot_duration": 1.6,
-    "target_shot_count_60s": [25, 35],
-    "hook_speed_range": [0.75, 1.35],
-    "post_hook_speed_range": [0.88, 1.18],
-    "absolute_non_hook_speed_range": [0.75, 1.25],
-    "clone_padding_policy": "no_clone_padding_except_final_2_frames",
-    "alignment_solve_order": "shot_count_then_speed",
-    "cold_open_policy": "allowed_if_supported_and_reviewed"
-  },
-  "selection_bias": [
-    "conflict",
-    "danger",
-    "confession",
-    "emotional reversal",
-    "character choice",
-    "visible consequence",
-    "object clue",
-    "strong reaction",
-    "visual salience",
-    "payoff availability"
-  ],
-  "avoid": [
-    "unsupported hype",
-    "invented motive",
-    "generic exposition",
-    "unrelated filler shots",
-    "scattered post-hook single-shot sampling",
-    "OP/ED/preview overlap",
-    "repeated same-framing close-ups without emotional purpose",
-    "post-hook overcutting"
-  ],
-  "script_rules": {
-    "opening": "start with a source-supported conflict, danger, contradiction, confession, or clear question in the first 1-2 seconds",
-    "middle": "add supported micro-hooks every 6-10 seconds and pay off or escalate each within 6-15 seconds",
-    "ending": "end at the strongest retention point; do not require full episode closure",
-    "support": "use only visible action, dialogue, emotion, objects, and transcript/frame-supported relationships"
-  },
-  "shot_mapping_rules": {
-    "cold_open": "may use up to 5 seconds of fast cuts and at most 2 documented nonlinear exceptions",
-    "return_to_main_path": "return to the main source timeline within 6-8 seconds",
-    "body": "use 3-6 contiguous source blocks for a 60-second short",
-    "unit_binding": "bind each script unit to one small source block or adjacent block pair",
-    "replacement": "prefer the nearest later suitable shot in the same story beat",
-    "large_jumps": "allow only at beat or paragraph transitions with recorded reasons"
-  },
-  "creative_qc_profile": {
-    "min_hook_candidates": 8,
-    "unsupported_claims_count": 0,
-    "generic_exposition_lines_max": 1,
-    "first_3s_requires_subject_and_conflict": true,
-    "rehook_interval_max_sec": 10,
-    "cold_open_max_sec": 5,
-    "return_to_main_timeline_max_sec": 8,
-    "selected_shot_count_60s": [25, 35],
-    "post_hook_min_shot_duration_sec": 1.3,
-    "dialogue_scene_min_shot_duration_sec": 1.6,
-    "post_hook_contiguous_source_blocks": true,
-    "unique_shots": true,
-    "op_ed_overlap_count": 0
-  }
-}
-```
+Do not paste full preset JSON into this Markdown guide. Human guidance belongs
+here; machine fields, thresholds, ranges, and validator-facing values belong in
+`story_styles.json`. When a style changes, update the JSON first, then summarize
+only the user-facing intent and writing examples in this file.

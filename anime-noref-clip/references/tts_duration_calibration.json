@@ -1,0 +1,24 @@
+{
+  "schema_version": "anime-noref-clip.tts_duration_calibration.v1",
+  "description": "Project-local TTS duration estimate calibration. Update profiles from completed local AI-tts runs; estimate_tts_duration.py falls back to built-in language profiles when this file is absent.",
+  "profiles": {
+    "zh": {
+      "metric": "cjk_chars",
+      "units_per_second_at_speed_1": 4.9,
+      "sample_count": 0,
+      "description": "Chinese IndexTTS local workflow calibration"
+    },
+    "th": {
+      "metric": "nonspace_chars",
+      "units_per_second_at_speed_1": 12.5,
+      "sample_count": 0,
+      "description": "Thai F5 local workflow calibration"
+    },
+    "en": {
+      "metric": "words",
+      "units_per_second_at_speed_1": 2.25,
+      "sample_count": 0,
+      "description": "English narration word budget calibration"
+    }
+  }
+}

@@ -166,8 +166,11 @@ def main():
         "tag_dir": str(tag_dir),
         "part_files": [part.name for part in part_files],
         "expected_shots": len(expected_ids),
+        "shot_count": len(expected_ids),
         "merged_rows": len(rows),
+        "visual_tagged_shot_count": len(rows),
         "missing_count": len(missing),
+        "visual_tag_missing_count": len(missing),
         "duplicate_count": len(duplicates),
         "invalid_count": len(invalid),
         "missing": missing,
@@ -178,6 +181,10 @@ def main():
         "rows_with_beat_ids": sum(1 for row in rows if row.get("beat_ids")),
         "black_or_fade_risk_rows": sum(1 for row in rows if row["black_or_fade_risk"]),
         "gate_passed": not missing and not duplicates and not invalid and len(rows) == len(expected_ids),
+        "visual_tag_coverage_passed": not missing
+        and not duplicates
+        and not invalid
+        and len(rows) == len(expected_ids),
         "gate_rule": "Only gpt-5.5 subagent JSONL visual tags may satisfy gpt_visual_tagging_done.",
     }
 

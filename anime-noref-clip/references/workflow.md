@@ -2,538 +2,11 @@
 
 ## Source Of Truth
 
-This file is canonical for detailed artifact schemas, `workflow_state.json` fields, gate thresholds, and the 22-row execution table. `../SKILL.md` is the activation and summary layer; it should point here instead of carrying independent copies of detailed rows or thresholds. `story_styles.json` is canonical for machine-readable story-style preset definitions, `story_styles.md` is the human guide, and `workflow_defaults.json` is canonical for non-style production defaults required by hard gates. When a production rule changes, update this file, `../scripts/validate_workflow_state.py`, and any affected files in `../templates/project/tools/` together.
+This file is canonical for `workflow_state.json` fields, gate thresholds, and the 22-row execution table. Artifact JSON examples and schema-shape targets live in `references/artifact_contracts.md`. Early story-writing handoff rules live in `references/initial_story_write.md`. `../SKILL.md` is the activation and summary layer; it should point here instead of carrying independent copies of detailed rows or thresholds. `story_styles.json` is canonical for machine-readable story-style preset definitions, `story_styles.md` is the human guide, and `workflow_defaults.json` is canonical for non-style production defaults required by hard gates. When a production rule changes, update this file, `references/artifact_contracts.md` when artifact shapes are affected, `../scripts/validate_workflow_state.py`, and any affected files in `../templates/project/tools/` together.
 
-## Artifact Schema Targets
+## Artifact Contracts
 
-Structured transcript from AssemblyAI speaker diarization:
-
-```json
-{
-  "provider": "assemblyai",
-  "source_audio": "output/source/audio.wav",
-  "language": "zh",
-  "utterances": [
-    {
-      "speaker": "Speaker A",
-      "start": 12.34,
-      "end": 15.67,
-      "text": "你真正想要的到底是什么"
-    },
-    {
-      "speaker": "Speaker B",
-      "start": 15.92,
-      "end": 21.4,
-      "text": "我想要的是眼前还不存在的东西"
-    }
-  ]
-}
-```
-
-Keep AssemblyAI speaker labels stable during the first pass. After visual tags and dialogue context are available, a stronger model may map them to role labels such as `少年`, `父亲`, `老人`, or `同伴`.
-
-Shot metadata:
-
-```json
-{
-  "shot_id": "shot_0000",
-  "src_index": 0,
-  "cut_source": "scene",
-  "start": 0.0,
-  "end": 12.4,
-  "duration": 12.4,
-  "frames": {
-    "first": "frames/shot_0000_first.jpg",
-    "mid": "frames/shot_0000_mid.jpg",
-    "last": "frames/shot_0000_last.jpg"
-  },
-  "sample_frames": [
-    {"time": 3.8, "path": "frames/shot_0000_sample_01.jpg"},
-    {"time": 7.2, "path": "frames/shot_0000_sample_02.jpg"}
-  ],
-  "render_boundary_policy": "real_scene_cut_only_no_duration_based_render_splits"
-}
-```
-
-Shot IDs represent real continuous source windows between ffmpeg scene cuts. Do not create renderable duration-based artificial shots for long source shots. Extra `sample_frames` are analysis-only frames used for contact sheets and visual tagging; they must not become cut boundaries or standalone render shots.
-
-Frame extraction report:
-
-```json
-{
-  "method": "opencv_batch_then_ffmpeg_timestamp_backfill",
-  "shot_count": 360,
-  "expected_images": 1284,
-  "opencv_saved_images": 1154,
-  "ffmpeg_backfill_images": 130,
-  "saved_images": 1284,
-  "missing_images": [],
-  "passes": true
-}
-```
-
-Story generation, contact sheets, visual tagging, and shot mapping must not start unless `passes=true`, `saved_images == expected_images`, and `missing_images` is empty.
-
-Fused story tag:
-
-```json
-{
-  "shot_id": "shot_0000",
-  "src_index": 0,
-  "start": 0.0,
-  "end": 3.2,
-  "characters": ["少年"],
-  "scene": "客厅",
-  "objects": ["茶杯"],
-  "key_subject": "少年",
-  "key_action": "道歉",
-  "emotion": "愧疚",
-  "visual_summary": "少年站在客厅里低头说话。",
-  "dialogue_summary": "对不起，我还不够强。",
-  "story_function": ["dialogue", "emotion"],
-  "confidence": 0.75
-}
-```
-
-Story atom:
-
-```json
-{
-  "atom_id": "a012",
-  "source_time": [164.6, 181.2],
-  "characters": ["少年", "玩偶男人"],
-  "event": "玩偶男人承认上一世杀过人",
-  "conflict": "他看似在告别，实际暴露了无法逃避的罪",
-  "question": "他为什么要在这时坦白",
-  "payoff": "这句话改变了少年对他的判断",
-  "supporting_dialogue": ["..."],
-  "supporting_shots": ["shot_0058", "shot_0060"],
-  "retention_type": ["confession", "mystery", "moral_conflict"],
-  "risk": "medium_spoiler"
-}
-```
-
-Retention brief:
-
-```json
-{
-  "story_style": "style_01_aggressive_youtube_cold_start",
-  "story_style_preset": "references/story_styles.json#styles/style_01_aggressive_youtube_cold_start",
-  "platform": "youtube_cold_start",
-  "target_duration_sec": 60,
-  "opening_goal": "2秒内制造反常识冲突",
-  "main_question": "这个男人为什么主动承认自己杀过人",
-  "stakes": "如果少年相信他，就会被拖进上一世的罪",
-  "spoiler_policy": "允许开头预告中段冲突，但不提前说最终结果",
-  "rhythm": {
-    "first_hook_sec": 2,
-    "rehook_interval_sec": 8,
-    "payoff_interval_sec": 20
-  },
-  "allowed_operations": [
-    "delete",
-    "compress",
-    "reorder_within_supported_context",
-    "relationship-name rewriting",
-    "cold-open teaser if documented"
-  ],
-  "forbidden_operations": [
-    "inventing motives",
-    "inventing lore",
-    "unsupported outcome",
-    "unrelated filler shots",
-    "empty sensationalism"
-  ]
-}
-```
-
-Hook candidate:
-
-```json
-{
-  "hook_id": "h03",
-  "type": "outcome_first",
-  "text": "这个玩偶男人不是来告别的，他一开口就承认自己杀过人",
-  "first_shots": ["shot_0058", "shot_0060"],
-  "supported_by_atoms": ["a012"],
-  "supporting_dialogue": ["..."],
-  "strength": 0.86,
-  "visual_salience": 0.82,
-  "mystery_value": 0.84,
-  "spoiler_risk": "medium",
-  "payoff_available": true,
-  "why_it_hooks": "身份反差 + 道德冲突 + 观众想知道原因"
-}
-```
-
-Retention shot score:
-
-```json
-{
-  "shot_id": "shot_0058",
-  "src_index": 58,
-  "start": 164.6,
-  "end": 169.4,
-  "visual_salience": 0.86,
-  "emotion_intensity": 0.78,
-  "motion_energy": 0.71,
-  "mystery_value": 0.83,
-  "conflict_value": 0.76,
-  "reaction_value": 0.69,
-  "object_clue_value": 0.55,
-  "continuity_cost": 0.32,
-  "repetition_risk": 0.18,
-  "source_block_id": "blk_003",
-  "spoiler_level": "medium",
-  "hook_candidate": true,
-  "rehook_candidate": true,
-  "payoff_candidate": false,
-  "risk_flags": []
-}
-```
-
-Source block:
-
-```json
-{
-  "block_id": "blk_003",
-  "source_time": [312.4, 329.8],
-  "shot_ids": ["shot_0121", "shot_0122", "shot_0123", "shot_0124"],
-  "story_function": "confession",
-  "characters": ["少年", "成年男性"],
-  "use_for_units": [5, 6],
-  "continuity_role": "main_path",
-  "large_jump_before": false,
-  "large_jump_reason": "",
-  "repetition_notes": "two close-ups separated by reaction insert"
-}
-```
-
-Script unit:
-
-```json
-{
-  "unit_id": 1,
-  "beat_id": 1,
-  "beat_role": "hook",
-  "beat_type": "reveal",
-  "text": "这个玩偶男人不是来告别的。他一开口，就承认上一世的自己，亲手杀过人。",
-  "target_seconds": 7.0,
-  "shot_ids": ["shot_0058", "shot_0060"]
-}
-```
-
-Script variant summary:
-
-```json
-{
-  "variant": "B_aggressive_retention",
-  "target_duration_sec": 58,
-  "hook_density": "high",
-  "line_count": 18,
-  "avg_line_sec": 3.2,
-  "chosen_hook_id": "h03",
-  "rehook_points": [0, 8, 17, 28, 41],
-  "payoff_points": [19, 43, 56],
-  "risk_flags": ["opening uses later shot as teaser"],
-  "unsupported_claims_count": 0,
-  "generic_exposition_lines": 0,
-  "script": []
-}
-```
-
-Final pick:
-
-```json
-{
-  "beat_id": 1,
-  "beat_role": "hook",
-  "beat_type": "reveal",
-  "shot_id": "shot_0058",
-  "src_index": 58,
-  "src_start": 164.6,
-  "src_end": 169.4,
-  "src_duration": 4.8,
-  "target_duration": 2.5,
-  "reason": "matches confession setup"
-}
-```
-
-Nonlinear exception:
-
-```json
-{
-  "exception_id": "nl_001",
-  "type": "cold_open_teaser",
-  "shot_id": "shot_0188",
-  "source_time": [612.4, 614.9],
-  "used_at_timeline": [0.0, 2.1],
-  "returns_to_shot_id": "shot_0042",
-  "reason": "strongest visible conflict; used only as opening question",
-  "supporting_script_line": "他还不知道，自己救下的人会在今晚背叛他",
-  "supported_by_atoms": ["a022"],
-  "spoiler_risk": "medium",
-  "approved_for_review": true
-}
-```
-
-Strict alignment shot:
-
-```json
-{
-  "shot_id": "shot_0058",
-  "beat_id": 1,
-  "src_start": 164.6,
-  "src_end": 167.7,
-  "duration": 2.485,
-  "timeline_start": 0.0,
-  "timeline_end": 2.485,
-  "speed_factor": 1.25
-}
-```
-
-Creative retention QC:
-
-```json
-{
-  "first_3s": {
-    "has_clear_subject": true,
-    "has_conflict_or_question": true,
-    "visual_salience_min": 0.75,
-    "line_char_count_max": 26,
-    "passes": true
-  },
-  "script": {
-    "unsupported_claims_count": 0,
-    "generic_exposition_lines": 0,
-    "max_line_duration_sec": 4.8,
-    "rehook_interval_max_sec": 9.5,
-    "micro_hooks_count": 6,
-    "payoff_count": 3,
-    "passes": true
-  },
-  "shots": {
-    "avg_shot_duration_sec": 1.35,
-    "selected_shot_count": 31,
-    "first_10s_shot_count": 7,
-    "cold_open_duration_sec": 4.6,
-    "returns_to_main_timeline_sec": 7.2,
-    "post_hook_min_shot_duration_sec": 1.36,
-    "dialogue_scene_min_shot_duration_sec": 1.72,
-    "source_blocks_count": 5,
-    "post_hook_contiguous_source_blocks": true,
-    "script_units_bound_to_blocks": true,
-    "large_jumps_only_at_beat_boundaries": true,
-    "large_jump_reasons_recorded": true,
-    "repeated_framing_penalty_applied": true,
-    "same_scene_run_max": 3,
-    "black_fade_risk_count": 0,
-    "op_ed_overlap_count": 0,
-    "nonlinear_exceptions_count": 1,
-    "monotonic_main_path": true,
-    "passes": true
-  },
-  "result": "pass"
-}
-```
-
-Alignment QC:
-
-```json
-{
-  "solve_order": "shot_count_then_speed",
-  "target_duration_sec": 60,
-  "selected_shot_count": 31,
-  "cold_open": {
-    "duration_sec": 4.6,
-    "min_shot_duration_sec": 0.68,
-    "min_speed_factor": 0.8,
-    "max_speed_factor": 1.32
-  },
-  "post_hook": {
-    "min_shot_duration_sec": 1.36,
-    "dialogue_scene_min_shot_duration_sec": 1.72,
-    "min_speed_factor": 0.91,
-    "max_speed_factor": 1.14,
-    "max_non_hook_speed_factor": 1.18
-  },
-  "padding": {
-    "tpad_clone_total_frames": 0,
-    "clone_padding_used_only_final_fallback": true
-  },
-  "passes": true
-}
-```
-
-Post-TTS pacing repair report:
-
-```json
-{
-  "estimated_duration_sec": 65.0,
-  "real_tts_duration_sec": 48.744,
-  "duration_delta_sec": -16.256,
-  "real_tts_duration_used": true,
-  "repair_actions": [
-    "deleted repeated reaction shots",
-    "extended stable source windows",
-    "rebalanced unit 9 shot ownership"
-  ],
-  "selected_shot_count_before": 38,
-  "selected_shot_count_after": 31,
-  "speed_range_before": [0.906, 1.723],
-  "speed_range_after": [0.906, 1.18],
-  "passes": true
-}
-```
-
-Stable sub-window map:
-
-```json
-{
-  "shot_id": "shot_0235",
-  "src_start": 582.420,
-  "src_end": 586.100,
-  "stable_src_start": 582.520,
-  "stable_src_end": 584.960,
-  "reason": "internal visual jump detected near shot tail",
-  "internal_cut_risk": true,
-  "safe_tail_buffer_frames": 0,
-  "crosses_source_cut": false
-}
-```
-
-Internal jump scan report:
-
-```json
-{
-  "method": "frame_diff_scan_excluding_planned_boundaries",
-  "diff_threshold": 0.42,
-  "planned_boundary_tolerance_frames": 2,
-  "internal_jump_count": 0,
-  "flagged_events": [],
-  "passes": true
-}
-```
-
-Language budget report:
-
-```json
-{
-  "language": "en-US",
-  "script_word_count": 136,
-  "budget_min": 130,
-  "budget_max": 145,
-  "budget_passed": true,
-  "workflow_state": "workflow_state_en.json"
-}
-```
-
-TTS generation manifest:
-
-```json
-{
-  "mode": "full_script",
-  "provider": "edge_tts",
-  "voice": "zh-CN-YunxiNeural",
-  "language": "zh-CN",
-  "text_source": "script.json",
-  "output_audio": "tts/narration_full.wav",
-  "word_boundary_source": "edge_tts_word_boundary",
-  "unit_audio_glob_checked": ["tts/unit_*.mp3", "tts/unit_*.wav"],
-  "concat_units_checked": "tts/concat_units.txt",
-  "unit_audio_residue_count": 0,
-  "single_generation": true
-}
-```
-
-TTS boundary table:
-
-```json
-{
-  "schema_version": "anime-noref-clip.tts_boundary_table.v1.4.9",
-  "language": "zh-CN",
-  "timing_source": "edge_tts_word_boundary",
-  "unit_count": 12,
-  "word_boundary_count": 180,
-  "boundary_text_mismatch_units": 0,
-  "units": [
-    {
-      "unit_id": 1,
-      "source_text": "戒指做好后，皇太子却先说：你没必要戴上它",
-      "boundary_count": 3,
-      "boundaries": [
-        {"bid": 0, "text": "戒指做好后", "start": 0.0, "end": 0.32},
-        {"bid": 1, "text": "皇太子却先说", "start": 0.32, "end": 0.78},
-        {"bid": 2, "text": "你没必要戴上它", "start": 0.78, "end": 1.48}
-      ]
-    }
-  ],
-  "passes": true
-}
-```
-
-Subtitle timing report:
-
-```json
-{
-  "language": "zh-CN",
-  "timing_source": "edge_tts_word_boundary",
-  "cue_strategy": "semantic display cues first, then real word-boundary timing",
-  "cue_count": 42,
-  "max_cue_duration_sec": 2.2,
-  "min_cue_duration_sec": 0.42,
-  "max_visual_line_chars": 16,
-  "semantic_segmentation_done": true,
-  "language_aware_segmentation": true,
-  "semantic_segmentation_source": "subagent_boundary_group_plan",
-  "subagent_semantic_segmentation_done": true,
-  "subagent_boundary_group_plan_done": true,
-  "subagent_plan_units_used": 12,
-  "boundary_group_plan_units_used": 12,
-  "local_rule_units_used": 0,
-  "boundary_table_path": "subtitles/tts_boundary_table.json",
-  "subtitle_plan_path": "subtitles/semantic_cue_plan.json",
-  "subtitle_plan_mismatch_count": 0,
-  "boundary_group_mismatch_count": 0,
-  "boundary_group_gap_count": 0,
-  "boundary_group_overlap_count": 0,
-  "boundary_group_uncovered_count": 0,
-  "boundary_group_duration_violation_count": 0,
-  "cross_sentence_boundary_count": 0,
-  "orphan_fragment_count": 0,
-  "bad_line_break_count": 0,
-  "boundary_alignment_checked": true,
-  "trailing_punctuation_removed": true,
-  "uses_real_tts_boundaries": true
-}
-```
-
-Vertical layout QA report:
-
-```json
-{
-  "layout": "vertical_9_16_blur_bg_full_16_9_foreground",
-  "canvas": [1080, 1920],
-  "foreground_box": {"x": 0, "y": 656, "w": 1080, "h": 608},
-  "top_blur_margin_px": 656,
-  "bottom_blur_margin_px": 656,
-  "foreground_vertical_center_error_px": 0,
-  "source_aspect_preserved": true,
-  "foreground_complete_frame": true,
-  "foreground_centered": true,
-  "foreground_vertically_centered": true,
-  "filter_order": "split source first, then process bg and fg branches separately",
-  "subtitle_position_basis": "foreground_box",
-  "subtitle_box_inside_foreground": true,
-  "subtitle_not_in_blurred_background": true,
-  "qa_frames": [
-    "qa_frames/layout_0002.jpg",
-    "qa_frames/layout_mid.jpg",
-    "qa_frames/layout_end.jpg"
-  ],
-  "passes": true
-}
-```
+Artifact JSON examples and field-shape targets live in `references/artifact_contracts.md`. Keep this workflow reference focused on execution order, gates, and operational rules; update artifact contracts alongside template tools and validators when output schemas change.
 
 ## Project Script Framework
 
@@ -543,16 +16,16 @@ New projects must initialize project-local tools from the skill template instead
 python3 ~/.codex/skills/anime-noref-clip/scripts/init_project_scripts.py --project-root <project>
 ```
 
-The initializer copies `templates/project/tools/`, the current workflow validator, story-style resolver/validator scripts, and the current `references/story_styles.json`, `references/story_styles.schema.json`, and `references/workflow_defaults.json` into the project. After that, project-specific adjustments are allowed inside the project copy. Copying tools from an old project is allowed only as a deliberate migration with review, because old tools may contain hardcoded episode paths, previous shot-splitting behavior, or stale language/render assumptions.
+The initializer copies `templates/project/tools/` without Python cache files, the strict workflow validator, the separated legacy validator entry, story-style resolver/validator scripts, and the current project-local runtime references: `workflow.md`, `artifact_contracts.md`, `story_styles.json`, `story_styles.md`, `story_styles.schema.json`, `subtitle_semantic_cue_plan.md`, `workflow_defaults.json`, `tts_duration_calibration.json`, `initial_story_write.md`, and `script_reference_optimization.md`. After that, project-specific adjustments are allowed inside the project copy. Copying tools from an old project is allowed only as a deliberate migration with review, because old tools may contain hardcoded episode paths, previous shot-splitting behavior, or stale language/render assumptions.
 
-The copied baseline includes `tools/build_tts_boundary_table.py` and `tools/build_post_tts_alignment_v145.py`. For production v1.4.9+ projects, first build `subtitles/tts_boundary_table.json`, then run a Codex subagent using `references/subtitle_semantic_cue_plan.md` and write `subtitles/semantic_cue_plan.json` with contiguous `boundary_start/boundary_end` groups. Then use the alignment builder as the default producer for the post-TTS pacing and alignment artifacts after single full-script TTS:
+The copied baseline includes `tools/build_tts_boundary_table.py` and `tools/build_post_tts_alignment_v145.py`. For production v1.4.9+ projects, first build `subtitles/tts_boundary_table.json`, then run a Codex subagent using the project-local `references/subtitle_semantic_cue_plan.md`, write `subtitles/semantic_cue_plan.json` with contiguous `boundary_start/boundary_end` groups, and call `close_agent` after collecting the result. Then use the alignment builder as the default producer for the post-TTS pacing and alignment artifacts after single full-script TTS:
 
 ```bash
 python3 tools/build_tts_boundary_table.py --project-root <project> --language <lang>
 python3 tools/build_post_tts_alignment_v145.py --project-root <project> --source-media <source-mkv> --language <lang> --require-subtitle-plan
 ```
 
-Call it after `tools/generate_tts_edge_v145.py` plus the boundary-group cue plan, and before `validate_workflow_state.py --gate pacing`, `tools/render_frameq_segments.py`, or final compose. It reads `script/script.json`, `script/final_shots.json`, `tts/tts_durations.json`, `tts/narration_boundaries.json`, `subtitles/tts_boundary_table.json`, and `subtitles/semantic_cue_plan.json`; it writes `alignment/post_tts_pacing_report.json`, `alignment/stable_subwindows.json`, `alignment/source_buffer_report.json`, `alignment/strict_alignment.json`, `alignment/strict_alignment_frameq.json`, `alignment/alignment_qc_report.json`, `subtitles/final.ass`, `subtitles/subtitle_timing_report.json`, and `compose/final_subtitles_frameq.ass`.
+Call it after `tools/generate_tts_ai_tts_v145.py --speed 1.2` plus the boundary-group cue plan, and before `validate_workflow_state.py --gate pacing`, `tools/render_frameq_segments.py`, or final compose. The alignment builder reads `script/script.json`, `script/final_shots.json`, `tts/tts_durations.json`, `tts/narration_boundaries.json`, `subtitles/tts_boundary_table.json`, and `subtitles/semantic_cue_plan.json`; it writes `alignment/post_tts_pacing_report.json`, `alignment/stable_subwindows.json`, `alignment/source_buffer_report.json`, `alignment/strict_alignment.json`, `alignment/strict_alignment_frameq.json`, `alignment/alignment_qc_report.json`, `subtitles/final.ass`, `subtitles/subtitle_timing_report.json`, and `compose/final_subtitles_frameq.ass`.
 
 Record the initialization in `workflow_state.json`:
 
@@ -580,47 +53,9 @@ This is a hard pause. If the cutting strategy is missing, stop after source disc
 
 After the user chooses, use this choice to tune shot detection thresholds and representative-frame sampling density. Do not tune a maximum shot duration by creating renderable artificial cuts, and do not trim long real shots during indexing. Run `scripts/validate_workflow_state.py <project>/workflow_state.json --gate cut` before any cut-dependent work when a state file exists.
 
-Before retention artifacts, resolve a story style preset from machine-loadable `references/story_styles.json`. If the user does not specify a style, use `style_01_aggressive_youtube_cold_start`, which preserves the previous default aggressive cold-start behavior:
+Before retention artifacts, resolve a story style preset from machine-loadable `references/story_styles.json`. If the user does not specify a style, use `style_01_aggressive_youtube_cold_start`. Do not duplicate preset overlays in this file; hook counts, pacing ranges, shot-count ranges, nonlinear policy, source-block rules, and style-specific QC values come from the resolved JSON preset and are enforced by `scripts/validate_workflow_state.py`.
 
-```json
-{
-  "story_style": "style_01_aggressive_youtube_cold_start",
-  "story_style_preset": "references/story_styles.json#styles/style_01_aggressive_youtube_cold_start",
-  "story_style_label": "Aggressive YouTube Cold Start",
-  "story_style_config": "references/story_styles.json",
-  "retention_mode": "aggressive_youtube_cold_start",
-  "hook_strategy": "multi_hook_with_payoff",
-  "nonlinear_teaser_allowed": true,
-  "max_nonlinear_exceptions": 2,
-  "target_duration_sec": 60,
-  "script_density": "high",
-  "shot_energy": "aggressive_but_stable_after_hook",
-  "cold_open_max_sec": 5,
-  "cold_open_allow_nonlinear": true,
-  "post_hook_main_path": "contiguous_source_blocks",
-  "post_hook_min_shot_duration": 1.3,
-  "dialogue_scene_min_shot_duration": 1.6,
-  "target_shot_count_60s": [25, 35],
-  "hook_speed_range": [0.75, 1.35],
-  "post_hook_speed_range": [0.88, 1.18],
-  "absolute_non_hook_speed_range": [0.75, 1.25],
-  "clone_padding_policy": "no_clone_padding_except_final_2_frames",
-  "alignment_solve_order": "shot_count_then_speed",
-  "cold_open_policy": "allowed_if_supported_and_reviewed"
-}
-```
-
-Cold-start hooks in `style_01_aggressive_youtube_cold_start` must be source-supported and paid off or clarified within 6-15 seconds. Empty sensational phrasing is not allowed. A hook is valid only when grounded in visible danger, contradiction, dialogue confession, emotional reversal, character choice, object clue, identity mismatch, consequence shown on screen, or a source-supported future outcome used as a reviewed teaser. Future styles must be added in `references/story_styles.json`, validated with `scripts/validate_story_styles.py`, and summarized in `references/story_styles.md`.
-
-Default-style pacing defaults:
-
-- Cold open may use 0.6-1.0s fast cuts for the first 3-5 seconds.
-- If nonlinear teaser shots are used, return to the main timeline within 6-8 seconds.
-- After the hook, use contiguous source blocks rather than scattered single-shot picks.
-- For a 60-second video, use the resolved preset's target shot-count range; style_01 targets about 25-35 selected shots, not 45-50.
-- Post-hook and dialogue-scene duration floors come from the resolved preset.
-- Hook, post-hook, and non-hook speed ranges come from the resolved preset's `decision_overlay`.
-- Do not use `tpad=clone` to stretch shot duration except a final 1-2 frame fallback.
+Hard production rules still override style presets: source support, full shot-level visual tag coverage, TTS `speed=1.2` unless explicitly overridden, real-TTS subtitle timing, frame-quantized alignment, layout QA, and delivery QA. Future styles must be added in `references/story_styles.json`, validated with `scripts/validate_story_styles.py`, and summarized in `references/story_styles.md`.
 
 Before final composition, confirm output aspect unless the user already specified it for this render:
 
@@ -638,7 +73,7 @@ Minimum shape:
 
 ```json
 {
-  "skill_version": "v1.4.14",
+  "skill_version": "v1.4.18",
   "project": "轮回7次的恶役千金_EP01",
   "current_phase": "creative_qc",
   "decisions": {
@@ -670,8 +105,9 @@ Minimum shape:
     "output_aspect": "vertical_9_16",
     "vertical_layout_strategy": "blurred_background_full_16_9_foreground",
     "tts_mode": "full_script",
-    "tts_voice": "zh-CN-YunxiNeural",
-    "tts_speed": 1.25,
+    "tts_provider": "ai_tts",
+    "ai_tts_language": "zh",
+    "tts_speed": 1.2,
     "watermark_enabled": false,
     "watermark_text": "@AlsinCro",
     "watermark_strategy": "slow dynamic motion with opacity cycling 5%-15%"
@@ -680,6 +116,7 @@ Minimum shape:
     "cut_strategy": true,
     "script_to_shot_review": false,
     "creative_retention_review": false,
+    "tts_speed_override": false,
     "tts_config": false,
     "output_aspect": true
   },
@@ -689,22 +126,28 @@ Minimum shape:
     "shot_metadata": "shots.json",
     "frame_extract_report": "analysis/frame_extract_report.json",
     "visual_tags": "shot_story_tags.json",
+    "visual_tag_coverage_report": "analysis/visual_tag_merge_report.json",
     "transcript": "transcript_assemblyai.json",
-    "story_beats": "story_beats.json",
-    "episode_summary": "episode_summary.json",
+    "story_evidence_pack": "analysis/story_evidence_pack.json",
+    "initial_story_seed": "analysis/initial_story_seed.json",
+    "initial_story_execution_log": "analysis/initial_story_execution_log.json",
     "story_atoms": "story_atoms.json",
     "retention_brief": "retention_brief.json",
     "hook_candidates": "hook_candidates.json",
     "retention_shot_pool": "retention_shot_pool.json",
     "source_blocks": "source_blocks.json",
     "shot_block_report": "review/shot_block_report.json",
+    "highlight_edit_plan": "review/highlight_edit_plan.json",
     "script_variants": "script_variants.json",
+    "script_reference_review": "script_reference_review.json",
+    "content_style_execution_log": "review/content_style_execution_log.json",
     "script": "script.json",
     "final_shots": "final_shots.json",
     "nonlinear_exceptions": "nonlinear_exceptions.json",
     "retention_qc": "retention_qc.json",
     "script_to_shot_review": "review/script_to_shot.md",
     "selected_contact_sheet": "review/selected_contact_sheet.jpg",
+    "tts_duration_estimate": "analysis/tts_duration_estimate.json",
     "continuous_tts_audio": "tts/narration_full.wav",
     "tts_generation_manifest": "tts/tts_generation_manifest.json",
     "tts_boundaries": "tts/narration_boundaries.json",
@@ -736,14 +179,39 @@ Minimum shape:
     "long_shot_multi_sample_done": true,
     "render_level_duration_splits_absent": true,
     "gpt_visual_tagging_done": true,
+    "visual_tagged_shot_count": 360,
+    "visual_tag_missing_count": 0,
+    "visual_tag_coverage_passed": true,
     "black_fade_metadata": true,
     "story_style_preset_resolved": true,
+    "story_evidence_pack_done": true,
+    "story_evidence_pack_subagent_closed": true,
+    "content_style_initial_story_invoked": true,
+    "initial_story_written_by_content_style_skill": true,
+    "initial_story_references_recorded": true,
+    "initial_story_source_support_passed": true,
+    "initial_story_unsupported_claims_count": 0,
+    "initial_story_no_lazy_transition_passed": true,
+    "initial_story_consumed_by_retention_brief": true,
+    "initial_story_consumed_by_hooks": true,
+    "initial_story_consumed_by_script_variants": true,
     "story_atoms_done": true,
     "retention_brief_done": true,
     "hook_candidates_count": 8,
     "chosen_hook_supported": true,
     "retention_shot_pool_done": true,
     "script_variants_count": 3,
+    "content_style_skill_invoked": true,
+    "script_reference_review_done": true,
+    "script_reference_review_candidate_reviews_done": true,
+    "script_reference_review_references_recorded": true,
+    "script_reference_style_fit_passed": true,
+    "script_reference_unsupported_claims_count": 0,
+    "script_sentence_source_map_done": true,
+    "script_sentence_source_map_coverage_passed": true,
+    "script_sentence_tts_budget_passed": true,
+    "script_plot_explanation_passed": true,
+    "visual_caption_line_count": 0,
     "creative_retention_qc_passed": true,
     "unsupported_claims_count": 0,
     "generic_exposition_lines": 0,
@@ -757,6 +225,8 @@ Minimum shape:
     "post_hook_min_shot_duration_sec": 1.36,
     "dialogue_scene_min_shot_duration_sec": 1.72,
     "source_blocks_count": 5,
+    "highlight_edit_plan_done": true,
+    "highlight_edit_plan_multi_beat_structure": true,
     "post_hook_contiguous_source_blocks": true,
     "script_units_bound_to_blocks": true,
     "large_jumps_only_at_beat_boundaries": true,
@@ -774,8 +244,12 @@ Minimum shape:
     "tts_concat_manifest_absent": true,
     "tts_real_boundaries_captured": true,
     "tts_word_boundaries_used": true,
+    "tts_speed_hard_rule_passed": true,
     "real_tts_duration_used": true,
-    "estimated_tts_duration_sec": 65.0,
+    "estimated_tts_duration_sec": 60.0,
+    "estimated_tts_duration_target_sec": 60.0,
+    "estimated_tts_duration_ratio": 1.0,
+    "tts_duration_estimate_passed": true,
     "real_tts_duration_sec": 48.744,
     "post_tts_pacing_repair_done": true,
     "post_tts_pacing_repair_passed": true,
@@ -853,12 +327,14 @@ Allowed `current_phase` values:
 - `shot_detection`
 - `visual_tagging`
 - `dialogue_frame_fusion`
-- `story_atoms`
+- `story_evidence_pack`
+- `initial_story`
 - `story_style`
 - `retention_brief`
 - `hook_candidates`
 - `retention_shot_pool`
 - `script_variants`
+- `script_reference_review`
 - `chosen_script`
 - `shot_mapping`
 - `creative_qc`
@@ -873,19 +349,46 @@ Allowed `current_phase` values:
 Hard gate rules:
 
 - Cut gate requires `decisions.cut_strategy` to be `rough` or `detailed` and `approvals.cut_strategy=true`. For workflow states using skill version `v1.4.7` or newer, it also requires `checks.project_tools_initialized_from_skill_template=true` and `checks.project_tools_copied_from_old_project=false`. No cut-dependent artifacts should be generated before this gate passes.
-- Story gate requires Cut gate plus `artifacts.shot_metadata`, `artifacts.frame_extract_report`, `checks.frame_extract_complete=true`, `checks.frame_extract_missing_count=0`, `checks.frame_extract_saved_images == checks.frame_extract_expected_images`, `checks.long_shot_multi_sample_done=true`, `checks.render_level_duration_splits_absent=true`, subagent-generated `artifacts.visual_tags`, `checks.gpt_visual_tagging_done=true`, and `checks.black_fade_metadata=true`. No contact sheets, subagent visual tagging, `story_beats`, `episode_summary`, `story_atoms`, `retention_brief`, `hook_candidates`, `retention_shot_pool`, `script_variants`, `script`, `final_shots`, script-to-shot review, or selected-shot contact sheet should be generated before frame extraction completeness passes. Local inspection, subtitle fusion, transcript summaries, or manual notes cannot satisfy this gate.
+- Story gate requires Cut gate plus `artifacts.shot_metadata`, `artifacts.frame_extract_report`, `checks.frame_extract_complete=true`, `checks.frame_extract_missing_count=0`, `checks.frame_extract_saved_images == checks.frame_extract_expected_images`, `checks.long_shot_multi_sample_done=true`, `checks.render_level_duration_splits_absent=true`, subagent-generated `artifacts.visual_tags`, `checks.gpt_visual_tagging_done=true`, `artifacts.visual_tag_coverage_report`, `checks.visual_tagged_shot_count == checks.shot_count`, `checks.visual_tag_missing_count=0`, `checks.visual_tag_coverage_passed=true`, and `checks.black_fade_metadata=true`. No contact sheets, subagent visual tagging, `story_evidence_pack`, `initial_story_seed`, `story_atoms`, `retention_brief`, `hook_candidates`, `retention_shot_pool`, `script_variants`, `script_reference_review`, `script`, `final_shots`, script-to-shot review, or selected-shot contact sheet should be generated before frame extraction completeness passes. Local inspection, subtitle fusion, transcript summaries, manual notes, or window-level candidate labels cannot satisfy this gate.
 - Style gate applies to workflow states using skill version `v1.4.11` or newer before retention artifacts. In `v1.4.12+`, run `scripts/validate_workflow_state.py <project>/workflow_state.json --gate style` after resolving the preset. The gate loads `references/story_styles.json`, requires `decisions.story_style`, `decisions.story_style_preset`, `decisions.story_style_label`, `decisions.story_style_config`, `artifacts.story_styles_config`, and `checks.story_style_preset_resolved=true`, validates the preset anchor and label, and checks all non-overridden `decision_overlay` fields plus scaled target shot-count bounds.
-- Creative gate applies before review/TTS for v1.4.12+ story-style workflows. It requires Story gate plus the Style gate for `v1.4.11+` states, `artifacts.story_atoms`, `artifacts.retention_brief`, `artifacts.hook_candidates`, `checks.hook_candidates_count` meeting the preset `creative_qc_profile.min_hook_candidates`, `checks.chosen_hook_supported=true`, `artifacts.retention_shot_pool`, `checks.retention_shot_pool_done=true`, `artifacts.source_blocks`, `artifacts.shot_block_report`, `artifacts.script_variants`, `checks.script_variants_count >= 3`, `artifacts.script`, `artifacts.final_shots`, `artifacts.retention_qc`, `checks.creative_retention_qc_passed=true`, style-profile claim/exposition/rehook thresholds, `checks.cold_open_duration_sec <= decisions.cold_open_max_sec`, return-to-main-timeline checks when nonlinear shots are allowed or used, `checks.selected_shot_count` within `checks.target_shot_count_min/max`, `checks.post_hook_min_shot_duration_sec >= decisions.post_hook_min_shot_duration`, `checks.dialogue_scene_min_shot_duration_sec >= decisions.dialogue_scene_min_shot_duration`, source-block continuity checks required by the preset, `checks.script_units_bound_to_blocks=true`, `checks.large_jumps_only_at_beat_boundaries=true`, `checks.large_jump_reasons_recorded=true`, `checks.repeated_framing_penalty_applied=true`, `checks.prefer_fewer_longer_shots=true`, `checks.nonlinear_exceptions_count <= decisions.max_nonlinear_exceptions`, `checks.monotonic_main_path=true`, preset `op_ed_overlap_count`, and preset `unique_shots` behavior. If nonlinear teasers are not allowed, `checks.nonlinear_exceptions_count` must be `0`; if they are allowed and used, require `checks.nonlinear_exceptions_reviewed=true`.
-- TTS gate requires Story gate plus the Creative gate for v1.4.11+ story-style workflows or when `decisions.retention_mode=aggressive_youtube_cold_start`, `approvals.script_to_shot_review=true`, `artifacts.script`, `artifacts.final_shots`, `artifacts.script_to_shot_review`, `decisions.tts_mode=full_script`, and the fixed voice for the target language.
+- Creative gate applies before review/TTS for v1.4.12+ story-style workflows. It requires Story gate plus the Style gate for `v1.4.11+` states, `artifacts.story_evidence_pack`, `checks.story_evidence_pack_done=true`, `checks.story_evidence_pack_subagent_closed=true`, `artifacts.initial_story_seed`, `artifacts.initial_story_execution_log`, `checks.content_style_initial_story_invoked=true`, `checks.initial_story_written_by_content_style_skill=true`, `checks.initial_story_references_recorded=true`, `checks.initial_story_source_support_passed=true`, `checks.initial_story_unsupported_claims_count=0`, `checks.initial_story_no_lazy_transition_passed=true`, `artifacts.story_atoms`, `checks.story_atoms_done=true`, `artifacts.retention_brief`, `checks.initial_story_consumed_by_retention_brief=true`, `artifacts.hook_candidates`, `checks.initial_story_consumed_by_hooks=true`, `checks.hook_candidates_count` meeting the preset `creative_qc_profile.min_hook_candidates`, `checks.chosen_hook_supported=true`, `artifacts.retention_shot_pool`, `checks.retention_shot_pool_done=true`, `artifacts.source_blocks`, `artifacts.shot_block_report`, style-5 `artifacts.highlight_edit_plan` plus `checks.highlight_edit_plan_done=true` and `checks.highlight_edit_plan_multi_beat_structure=true` when `decisions.highlight_edit_plan_required=true`, `artifacts.script_variants`, `checks.initial_story_consumed_by_script_variants=true`, `checks.script_variants_count >= 3`, `artifacts.script_reference_review`, `artifacts.content_style_execution_log`, `checks.content_style_skill_invoked=true`, `checks.script_reference_review_done=true`, `checks.script_reference_review_candidate_reviews_done=true`, `checks.script_reference_review_references_recorded=true`, `checks.script_reference_style_fit_passed=true`, `checks.script_reference_unsupported_claims_count=0`, `artifacts.script`, `checks.script_sentence_source_map_done=true`, `checks.script_sentence_source_map_coverage_passed=true`, `checks.script_sentence_tts_budget_passed=true`, `checks.script_plot_explanation_passed=true`, `checks.visual_caption_line_count=0`, `artifacts.final_shots`, `artifacts.retention_qc`, `checks.creative_retention_qc_passed=true`, style-profile claim/exposition/rehook thresholds, `checks.cold_open_duration_sec <= decisions.cold_open_max_sec`, return-to-main-timeline checks when nonlinear shots are allowed or used, `checks.selected_shot_count` within `checks.target_shot_count_min/max`, `checks.post_hook_min_shot_duration_sec >= decisions.post_hook_min_shot_duration`, `checks.dialogue_scene_min_shot_duration_sec >= decisions.dialogue_scene_min_shot_duration`, source-block continuity checks required by the preset, `checks.script_units_bound_to_blocks=true`, `checks.large_jumps_only_at_beat_boundaries=true`, `checks.large_jump_reasons_recorded=true`, `checks.repeated_framing_penalty_applied=true`, `checks.prefer_fewer_longer_shots=true`, `checks.nonlinear_exceptions_count <= decisions.max_nonlinear_exceptions`, `checks.monotonic_main_path=true`, preset `op_ed_overlap_count`, and preset `unique_shots` behavior. The initial story and final review artifacts must come from the `content-style-system` writing skill; row 7 must record `anime_clip_initial_story_write`, and row 11 must record the anime optimization reference plus candidate reviews, sentence-source-map audit, and plot-explanation audit for every script variant. If nonlinear teasers are not allowed, `checks.nonlinear_exceptions_count` must be `0`; if they are allowed and used, require `checks.nonlinear_exceptions_reviewed=true`.
+- TTS gate requires Story gate plus the Creative gate for v1.4.11+ story-style workflows or when `decisions.retention_mode=aggressive_youtube_cold_start`, `approvals.script_to_shot_review=true`, `artifacts.script`, `artifacts.final_shots`, `artifacts.script_to_shot_review`, `decisions.tts_mode=full_script`, `decisions.tts_speed=1.2`, `checks.tts_speed_hard_rule_passed=true`, `artifacts.tts_duration_estimate`, `checks.estimated_tts_duration_target_sec == decisions.target_duration_sec`, `checks.estimated_tts_duration_ratio >= 0.9`, `checks.tts_duration_estimate_passed=true`, and the fixed AI-tts language profile for the target language. A non-1.2 speed is valid only when `approvals.tts_speed_override=true` and `decisions.tts_speed_override_reason` is non-empty. If `checks.source_window_changed_after_script=true` or `checks.material_source_expanded_after_script=true`, the gate also requires `checks.script_rewritten_after_source_window_change=true` and `checks.script_reference_review_refreshed_after_source_change=true`.
 - Post-TTS pacing gate requires TTS gate plus `artifacts.continuous_tts_audio`, `artifacts.tts_generation_manifest`, `artifacts.tts_boundaries`, `artifacts.post_tts_pacing_report`, `artifacts.stable_subwindows`, `artifacts.source_buffer_report`, `decisions.source_buffer_policy` from `references/workflow_defaults.json`, `checks.real_tts_duration_used=true`, `checks.real_tts_duration_sec`, `checks.post_tts_pacing_repair_done=true`, `checks.post_tts_pacing_repair_passed=true`, `checks.post_tts_speed_range_passed=true`, `checks.post_tts_shot_count_passed=true`, `checks.stable_subwindows_done=true`, `checks.safe_tail_buffer_policy_applied=true`, `checks.safe_render_tail_buffer_frames <= 2`, `checks.source_buffer_crosses_cut=false`, `checks.language_workflow_state_isolated=true`, and the same shot-count/speed range checks used by compose. English outputs also require `checks.english_word_budget_passed=true` and `checks.english_word_count` within the configured budget.
-- Compose gate requires Post-TTS pacing gate plus `decisions.cut_strategy`, `decisions.output_aspect`, `approvals.output_aspect=true`, `artifacts.strict_alignment`, `artifacts.alignment_qc_report`, `artifacts.subtitle_file`, `artifacts.subtitle_timing_report`, `checks.tts_single_file_only=true`, `checks.tts_unit_audio_residue_count=0`, `checks.tts_concat_manifest_absent=true`, `checks.tts_real_boundaries_captured=true`, `checks.subtitle_timing_from_real_tts=true`, `checks.subtitle_word_boundary_cue_merge_done=true`, `checks.subtitle_semantic_segmentation_done=true`, `checks.subtitle_language_aware_segmentation=true`, `checks.subtitle_boundary_alignment_checked=true`, `checks.subtitle_cross_sentence_boundary_count=0`, `checks.subtitle_orphan_fragment_count=0`, `checks.subtitle_bad_line_break_count=0`, `checks.subtitle_max_cue_duration_sec <= 2.2`, `checks.subtitle_min_cue_duration_sec >= 0.3`, `checks.multilingual_timing_isolated=true`, `checks.alignment_solves_shot_count_before_speed=true`, hook/post-hook/non-hook speed within the resolved preset ranges in `decisions.*_speed_range`, `checks.tpad_clone_total_frames <= 2`, `checks.clone_padding_used_only_final_fallback=true`, `checks.black_fade_metadata=true`, and `checks.subtitle_trailing_punctuation_removed=true`. For workflow states using skill version `v1.4.9` or newer, it also requires `artifacts.tts_boundary_table`, `artifacts.semantic_cue_plan`, `checks.subtitle_subagent_boundary_group_plan_done=true`, `checks.subtitle_semantic_segmentation_source="subagent_boundary_group_plan"`, `checks.subtitle_boundary_group_mismatch_count=0`, `checks.subtitle_boundary_group_gap_count=0`, `checks.subtitle_boundary_group_overlap_count=0`, `checks.subtitle_boundary_group_uncovered_count=0`, and `checks.subtitle_boundary_group_duration_violation_count=0`. For `v1.4.8` states only, it requires the older subagent text cue plan checks. For Edge TTS outputs, also require `checks.tts_word_boundaries_used=true`.
+- Compose gate requires Post-TTS pacing gate plus `decisions.cut_strategy`, `decisions.output_aspect`, `approvals.output_aspect=true`, `artifacts.strict_alignment`, `artifacts.alignment_qc_report`, `artifacts.subtitle_file`, `artifacts.subtitle_timing_report`, `checks.tts_single_file_only=true`, `checks.tts_unit_audio_residue_count=0`, `checks.tts_concat_manifest_absent=true`, `checks.tts_real_boundaries_captured=true`, `checks.subtitle_timing_from_real_tts=true`, `checks.subtitle_word_boundary_cue_merge_done=true`, `checks.subtitle_semantic_segmentation_done=true`, `checks.subtitle_language_aware_segmentation=true`, `checks.subtitle_boundary_alignment_checked=true`, `checks.subtitle_cross_sentence_boundary_count=0`, `checks.subtitle_orphan_fragment_count=0`, `checks.subtitle_bad_line_break_count=0`, `checks.subtitle_max_cue_duration_sec <= 2.2`, `checks.subtitle_min_cue_duration_sec >= 0.3`, `checks.multilingual_timing_isolated=true`, `checks.alignment_solves_shot_count_before_speed=true`, hook/post-hook/non-hook speed within the resolved preset ranges in `decisions.*_speed_range`, `checks.tpad_clone_total_frames <= 2`, `checks.clone_padding_used_only_final_fallback=true`, `checks.black_fade_metadata=true`, and `checks.subtitle_trailing_punctuation_removed=true`. It also requires `artifacts.tts_boundary_table`, `artifacts.semantic_cue_plan`, `checks.subtitle_subagent_boundary_group_plan_done=true`, `checks.subtitle_semantic_segmentation_source="subagent_boundary_group_plan"`, `checks.subtitle_boundary_group_mismatch_count=0`, `checks.subtitle_boundary_group_gap_count=0`, `checks.subtitle_boundary_group_overlap_count=0`, `checks.subtitle_boundary_group_uncovered_count=0`, and `checks.subtitle_boundary_group_duration_violation_count=0`.
 - Delivery gate requires compose gate plus `artifacts.final_video`, `artifacts.qa_summary`, `artifacts.frame_quantized_alignment`, `artifacts.rendered_timing_drift_report`, `artifacts.internal_jump_scan_report`, `checks.frame_quantized_alignment=true`, `checks.rendered_timeline_probe_passed=true`, `checks.max_line_boundary_drift_ms <= 80`, `checks.internal_jump_scan_done=true`, `checks.internal_jump_scan_passed=true`, `checks.internal_jump_count=0`, `checks.ffprobe_passed=true`, and `checks.blackdetect_passed=true`. For `vertical_9_16` or `both`, it also requires `artifacts.vertical_layout_qa`, `artifacts.layout_qa_frames`, `checks.vertical_layout_full_frame_foreground=true`, `checks.vertical_layout_blurred_background=true`, `checks.vertical_filter_split_before_scale=true`, `checks.foreground_centered_in_vertical_canvas=true`, `checks.foreground_vertically_centered=true`, `checks.foreground_vertical_center_error_px <= 4`, `checks.subtitle_position_based_on_foreground_box=true`, `checks.subtitle_inside_main_picture=true`, `checks.subtitle_not_in_blurred_background=true`, and `checks.layout_qa_frames_checked=true`. If `decisions.watermark_enabled=true`, it also requires `decisions.watermark_text`, `decisions.watermark_strategy`, `checks.watermark_strategy_applied=true`, `checks.watermark_strategy_recorded=true`, and `checks.watermark_visibility_checked=true`.
 
-## Table-Driven Execution
+## Goal-Driven Execution Dashboard
 
-Before any production work, publish a user-visible Markdown execution table derived from the required workflow, `workflow_state.json`, existing artifacts, and the user's supplied inputs. Only read-only inspection is allowed before the table exists.
+Before any production work, publish a user-visible Markdown execution dashboard derived from the required workflow, `workflow_state.json`, existing artifacts, and the user's supplied inputs. Only read-only inspection is allowed before the dashboard exists.
 
-The execution table is a safety surface, not just a progress list. It must make fragile gates visible in the table itself so resumed runs and parallel windows do not rely on memory. Include a `Visible gate / rule note` column in the Markdown table and mirror the same constraint in todo/plan item text when the todo tool is used.
+The execution dashboard is a safety surface, not the execution lock. It must make fragile gates visible so resumed runs and parallel windows do not rely on memory. The active Codex goal is the execution lock, and each dashboard row maps to exactly one goal.
+
+Goal objective format:
+
+```text
+anime-noref-clip | <project> | row NN/22 | <phase> | <required gate or decision>
+```
+
+At run start or resume:
+
+1. Call `get_goal` after read-only inspection and before mutating work.
+2. Find the earliest row that is not `Done` and not explicitly `Blocked`.
+3. If no active goal exists, call `create_goal` for that row using the objective format above.
+4. If an active goal exists and matches that row, continue only that row.
+5. If an active goal points to a later row, stop and report a goal/table mismatch. Do not execute the later row.
+6. When the active row's gate passes, update `workflow_state.json`, publish a dashboard delta, then call `update_goal(status=complete)`.
+7. If continuing immediately, create the next row goal only after the prior goal is complete.
+8. If a validator fails or a required artifact/decision is missing, mark the row `Blocked`, keep the active goal open, and stop. Do not create the next goal.
+
+Any row that launches Codex subagents must close them after their results are collected, merged, or rejected. Use `close_agent` before marking that row `Done`; lingering completed subagents are not valid row completion.
+
+For row 11, the active goal objective must explicitly name the writing-skill copywriting gate:
+
+```text
+anime-noref-clip | <project> | row 11/22 | content-style-system copywriting | writing-skill script gate
+```
+
+Do not use a generic "script optimization" goal for row 11.
 
 Minimum table columns:
 
@@ -899,20 +402,20 @@ Rows must preserve this order unless the user explicitly changes the deliverable
 1. Source analysis, state setup, and project tool initialization — project-isolated paths only; inspect read-only before table; new projects must run `init_project_scripts.py` from the skill template and must not copy another episode's `tools/`.
 2. Cut strategy decision and cut gate — stop until `rough` or `detailed` is approved.
 3. Shot detection, frame extraction, black/fade metadata — no shot work before cut gate; use only real ffmpeg scene cuts as shots; long shots get extra analysis samples; OpenCV extraction plus ffmpeg fallback must leave zero missing frames.
-4. GPT visual tagging by `gpt-5.5` subagents and story gate — subagent JSONL required; local notes do not count.
+4. GPT visual tagging by `gpt-5.5` subagents and story gate — subagent JSONL required; local notes do not count; close every tagging subagent with `close_agent` after collecting output.
 5. Dialogue/frame fusion — fuse transcript plus visual tags; do not write story from transcript alone.
-6. Story atom extraction — source-supported atoms only; no narration yet.
-7. Story style preset and retention brief — resolve `references/story_styles.json` preset before hook/payoff/skip rules.
+6. Story evidence pack subagent — build `story_evidence_pack.json` from visual tags, dialogue/frame fusion, subtitle alignment, and independent video windows; evidence only, no narration; close the subagent with `close_agent`.
+7. Story style preset, content-style initial story, and retention brief — resolve `references/story_styles.json`, call `content-style-system` task `anime_clip_initial_story_write`, save `initial_story_seed.json`, `initial_story_execution_log`, and canonical `story_atoms.json` before hook/payoff/skip rules.
 8. Hook candidates — meet the resolved preset's minimum supported hook count; reject unsupported hype.
 9. Retention shot pool — score shots and blocks; penalize continuity cost and repetition.
 10. Script variants — generate style-appropriate source-supported variants.
-11. Chosen script — choose variant before mapping; no unsupported claims.
+11. Reference script optimization and chosen script — active goal must be `row 11/22 | content-style-system copywriting | writing-skill script gate`; call the `content-style-system` writing skill to write/rewrite final copy; create `script_reference_review.json` plus `content_style_execution_log` before final script; choose variant before mapping; no unsupported claims.
 12. Style-aware shot mapping — apply the resolved preset's shot mapping rules, nonlinear policy, shot-count range, and source-block requirements.
 13. Creative retention QC — must pass shot count, block continuity, OP/ED, uniqueness, support, and pacing checks before review.
 14. Review artifacts and user approval — no TTS before accepted script-to-shot review.
-15. Full-script TTS and TTS gate — one continuous TTS only; no `unit_*` audio or concat manifest.
+15. TTS duration estimate, full-script TTS, and TTS gate — estimate at speed 1.2 first; one continuous TTS only; no `unit_*` audio or concat manifest.
 16. Post-TTS pacing repair gate — real TTS duration controls shot count, source windows, speed, and language budget before render.
-17. TTS boundary table, subagent boundary-group subtitles, strict/frame-quantized alignment, and subtitle cleanup — build boundary table first, subagent groups contiguous boundary ids, script validates coverage and exact timing.
+17. TTS boundary table, subagent boundary-group subtitles, strict/frame-quantized alignment, and subtitle cleanup — build boundary table first, subagent groups contiguous boundary ids, close the subagent with `close_agent`, then script validates coverage and exact timing.
 18. Output aspect/layout confirmation and compose gate — vertical means blurred background plus full 16:9 foreground centered left/right and top/bottom; subtitles use foreground-box coordinates.
 19. Segment render and timing probe — rendered frame counts must match; drift thresholds apply.
 20. Internal jump scan — exclude planned edit boundaries; internal jump count must be 0.
@@ -926,7 +429,22 @@ Status rules:
 - `Done`: the required artifact exists, approval is recorded, or the relevant validator/gate passed.
 - `Blocked`: the row cannot proceed because a required user decision, upstream artifact, or gate is missing.
 
-Do not start a later row until all earlier required rows are `Done` or `Blocked` with an explicit stop. If a row is already satisfied by existing artifacts, mark it `Done` with the artifact path or gate result as evidence. After each major phase or validator run, send an updated table or concise table delta before continuing. Keep the visible gate/rule note present in deltas for any row whose status changed or is about to run.
+Do not start a later row until all earlier required rows are `Done` or `Blocked` with an explicit stop, and do not create a later row goal until the current goal is complete. If a row is already satisfied by existing artifacts, mark it `Done` with the artifact path or gate result as evidence. After each major phase or validator run, send an updated dashboard or concise dashboard delta before continuing. Keep the visible gate/rule note present in deltas for any row whose status changed or is about to run.
+
+Record a lightweight audit trail in `workflow_state.json` when real work starts. This is for resume/debug visibility and must not break old projects that lack the field:
+
+```json
+{
+  "goal_chain": {
+    "mode": "per_table_row",
+    "total_rows": 22,
+    "active_row": 4,
+    "active_goal_objective": "anime-noref-clip | EP01 | row 04/22 | GPT visual tagging | story gate",
+    "completed_rows": [1, 2, 3],
+    "blocked_rows": []
+  }
+}
+```
 
 At the start of every resumed run, report:
 
@@ -936,31 +454,42 @@ Project: <project>
 Current phase: <phase>
 Completed gates: <list>
 Blocked gates: <list>
+Active goal: <objective or none>
+Goal/table status: <matched, no-active-goal, or mismatch>
 Next decision or action: <item>
 ```
 
-Then include the execution plan table. The table is the authoritative todo order for the run.
+Then include the execution dashboard. The dashboard is the visible order; the active goal is the mutating-work lock.
 
 Use `scripts/validate_workflow_state.py` after resolving the story style (`--gate style`), before production TTS (`--gate tts`), after `tools/build_post_tts_alignment_v145.py` finishes post-TTS pacing repair (`--gate pacing`), before compose (`--gate compose`), and before final delivery (`--gate deliver`) whenever `workflow_state.json` exists.
 
-## Fixed TTS Voice Defaults
+## TTS Provider Defaults
 
-Use fixed TTS voices by target language. These are production defaults, not per-run preferences:
+Use local `AI-tts` as the production TTS provider (`provider=ai_tts`).
 
 ```json
 {
-  "zh-CN": "zh-CN-YunxiNeural",
-  "th-TH": "th-TH-PremwadeeNeural"
+  "provider": "ai_tts",
+  "default_speed": 1.2,
+  "profiles": {
+    "zh-CN": "zh",
+    "zh": "zh",
+    "en-US": "en",
+    "en": "en",
+    "th-TH": "th",
+    "th": "th"
+  }
 }
 ```
 
 Rules:
 
 1. Determine the target language before TTS.
-2. Set `decisions.tts_voice` from the fixed map.
-3. Use `full_script` TTS as normal.
-4. Do not silently substitute another voice. If a voice is unavailable, stop and report the provider failure.
-5. Only change the fixed map when the user explicitly asks to update skill defaults.
+2. Set `decisions.tts_provider=ai_tts`.
+3. Set `decisions.tts_speed=1.2`; any other speed requires `approvals.tts_speed_override=true` plus a non-empty `decisions.tts_speed_override_reason`.
+4. Before TTS, run `tools/estimate_tts_duration.py --speed 1.2`; it reads `references/tts_duration_calibration.json` when present and records `calibration_source`.
+5. For AI-tts, set `decisions.ai_tts_language` to the profile value above and do not require a separate voice decision.
+6. Use `full_script` TTS and keep one continuous output file.
 
 ## Sequential Shot Selection
 
@@ -980,17 +509,13 @@ The story may skip weak or repetitive material, but the main selected path must 
 
 When a preset allows nonlinear exceptions, every exception must be written to `nonlinear_exceptions.json`, counted against `decisions.max_nonlinear_exceptions`, listed in the review, and followed by the preset's return-to-main-path policy. Do not hide nonlinear exceptions from the user.
 
-Default style_01 selection targets:
+Resolved preset selection targets:
 
-- First 3 seconds: clear subject, conflict/question, high visual salience.
-- Cold open: 0.6-1.0 second fast cuts are allowed for 3-5 seconds only.
-- First 10 seconds: usually 5-8 shots unless the source requires slower emotional pacing.
-- 60-second total shot count: usually 25-35 shots.
-- Post-hook shots: minimum `1.3s` by default.
-- Dialogue/confession/emotion shots: usually `1.6-2.8s`.
-- Average shot duration: usually 1.5-2.4 seconds after the hook; slower for emotional payoff or clear dialogue weight.
-- Avoid more than 3 consecutive shots with the same framing/emotion unless it is a deliberate dramatic hold.
-- Every 6-10 seconds should introduce either a new visual question, danger, emotional shift, object clue, or payoff.
+- First 3 seconds should satisfy the resolved preset's subject/conflict/salience rule when enabled.
+- Cold-open duration, nonlinear teaser allowance, return-to-main timing, shot-count range, post-hook duration floor, dialogue/emotion duration floor, and speed ranges come from `references/story_styles.json`.
+- Use the preset's source-block policy instead of scattered single-shot sampling. Style 5 additionally requires a multi-beat `highlight_edit_plan`.
+- Avoid repeated same-framing shots unless the hold is intentional and recorded.
+- Do not use `tpad=clone` to stretch shot duration except the final 1-2 frame fallback allowed by the hard gate.
 
 ## Post-Render Timing Validation
 
@@ -1032,13 +557,13 @@ Do not split long shots into artificial render shots to create more contact-shee
 
 This step must be performed by Codex subagents. Local inspection, subtitle fusion, transcript summaries, manual scene notes, or non-subagent model output may be used only to prepare prompts or audit results. They must not create the final `shot_story_tags.json`, must not be treated as equivalent to visual tags, and must never be used to set `checks.gpt_visual_tagging_done=true`.
 
-Use batches of about 12 shots per sheet. Ask subagents to output JSONL only, one line per shot.
+Use batches of about 12 shots per sheet. Ask subagents to output JSONL only, one line per shot. After a subagent returns or is no longer needed, collect its output and call `close_agent`; do this for successful, failed, and superseded tagging agents.
 
 Default model choice:
 
 - Use `gpt-5.5` subagents with `reasoning_effort: low` for both quick screening and production full-episode tagging.
 - Treat subagent GPT visual tagging as the required production path. Do not wait for a separate user instruction to start it when visual tags are needed; only skip it if the user explicitly opts out.
-- Treat visual tagging as a pre-story hard gate. Transcript-only analysis, manual notes, local inspection, or subtitle summaries may prepare prompts, but they must not produce `story_beats`, `episode_summary`, narration scripts, shot mappings, or review artifacts before merged subagent visual tags exist.
+- Treat visual tagging as a pre-story hard gate. Transcript-only analysis, manual notes, local inspection, or subtitle summaries may prepare prompts, but they must not produce `story_evidence_pack`, `initial_story_seed`, `story_atoms`, narration scripts, shot mappings, or review artifacts before merged subagent visual tags exist.
 - Escalate only selected difficult sheets or key story segments to `gpt-5.5` with `reasoning_effort: medium`.
 - Observed quota reference on a 24-sheet / 282-shot episode: full `gpt-5.5 low` tagging used about 3-4% of a Pro 5x five-hour quota window.
 
@@ -1052,7 +577,7 @@ Use role terms, not IP names. Do not invent what is not visible.
 Keep terminology stable across sheets. Prefer `少年`, `成年男性`, `老人`, `怪鸟`, `云海`, `巨树`, and similar reusable terms over many one-off synonyms.
 ```
 
-Merge all subagent JSONL parts, check duplicates, missing IDs, invalid JSON, and any shot covered only by local/manual notes. If the final batch misses shots, reassign only missing sheet ranges to subagents.
+Merge all subagent JSONL parts, check duplicates, missing IDs, invalid JSON, and any shot covered only by local/manual notes. If the final batch misses shots, reassign only missing sheet ranges to subagents. Close each completed subagent with `close_agent` before setting `checks.gpt_visual_tagging_done=true`.
 
 After merging, normalize:
 
@@ -1060,18 +585,20 @@ After merging, normalize:
 - object names: merge `怪鸟`, `巨鸟幼鸟`, `雏鸟` when the story role is the same
 - story functions: map one-off labels into a stable set such as `setup`, `action`, `dialogue`, `emotion`, `reveal`, `transition`, `object`, `landscape`, `op_ed`, `unknown`
 
-After normalization, update `workflow_state.json` with `checks.gpt_visual_tagging_done=true`, `artifacts.visual_tags`, and any missing-shot count. Run `scripts/validate_workflow_state.py <project>/workflow_state.json --gate story` before story synthesis or shot mapping.
+After normalization, update `workflow_state.json` with `checks.gpt_visual_tagging_done=true`, `artifacts.visual_tags`, and any missing-shot count. Run `scripts/validate_workflow_state.py <project>/workflow_state.json --gate story` before the story evidence pack subagent, content-style initial story writing, or shot mapping.
 
 ## Retention Subagent Prompt Essentials
 
 Use separate narrow prompts for creative stages so each artifact can be audited:
 
-- Story atoms: output JSON only, do not write narration, every atom must be supported by dialogue or visual tags, prefer conflict/danger/reversal/confession/choice/object clue/emotional contradiction, and use role terms instead of IP names.
+- Story evidence pack: use a Codex subagent to output `story_evidence_pack.json` from visual tags, dialogue/frame fusion, subtitle alignment, and independent video windows. It must include environment replacement chains, role relationships, background experience, cause-effect chains, strong visual evidence, quotable dialogue, forbidden inferences, and source shot/time mappings; it must not write narration or final story copy, and it must close the subagent with `close_agent`.
+- Initial story writing: delegate to `content-style-system` task `anime_clip_initial_story_write` with `references/initial_story_write.md`; save `initial_story_seed.json`, `story_atoms.json`, and `initial_story_execution_log`. `anime-noref-clip` must not locally extract or rewrite `story_atoms.json`.
 - Story style preset: resolve a preset from `references/story_styles.json` before retention brief, record it in `workflow_state.json`, run the `style` gate, and apply its decision overlay to downstream prompts.
 - Hook candidates: generate at least the resolved preset's `creative_qc_profile.min_hook_candidates` hooks with `hook_id`, `type`, `text`, `first_shots`, `supported_by_atoms`, support dialogue, scores, spoiler risk, payoff availability, and `why_it_hooks`. Reject unsupported sensational hooks.
 - Retention shot pool: score only what is visible or strongly supported by nearby dialogue. Penalize OP/ED/preview, black/fade, unclear framing, confusing out-of-order shots, repeated same-framing close-ups, and scattered shots with high continuity cost.
 - Source blocks: group adjacent source shots into coherent story blocks and map script units to those blocks. Do not optimize the body by picking isolated high-energy shots one by one.
 - Script variants: generate variants appropriate to the resolved story style and its `script_rules`; for style_01, variants may include `A_clear_plot`, `B_aggressive_retention`, and `C_high_density_reversal`.
+- Reference script optimization: after `script_variants.json`, the active row 11 goal must name `content-style-system` copywriting. Delegate candidate review and final copy rewrite to the `content-style-system` writing skill using `references/script_reference_optimization.md`; write the returned result as `script_reference_review.json` and save `content_style_execution_log` before final script or shot mapping.
 - Creative retention QC: use the resolved preset's `creative_qc_profile`, fail unsupported claims, undocumented nonlinear exceptions, non-monotonic main path, OP/ED overlap, or unrelated filler shots, and return concrete revision suggestions when failing.
 
 ## AssemblyAI Transcript With Speaker Diarization
@@ -1141,41 +668,21 @@ Cold-open teaser exceptions are not allowed to use OP/ED/preview shots unless th
 
 Run these creative stages after dialogue/frame fusion and before script-to-shot review. The artifact sequence is shared across styles; prompt bias, shot-selection bias, nonlinear policy, shot-count range, and QC profile come from the resolved preset in `references/story_styles.json`.
 
-1. Extract `story_atoms.json`. Do not write narration yet. Keep atoms compact, source-supported, and biased toward conflict, choice, danger, reversal, secret, contradiction, object clue, or emotional consequence. Mark weak exposition atoms so the script can compress or skip them.
+1. Build `story_evidence_pack.json` with an independent Codex subagent. The pack is evidence only, grouped per independent video, and must include visual/dialogue support, background experience, environment replacement chains, forbidden inferences, and source shot/time mapping.
 2. Resolve `decisions.story_style` from `references/story_styles.json`. If unspecified, use `style_01_aggressive_youtube_cold_start`; record `story_style`, `story_style_preset`, `story_style_label`, `story_style_config`, `artifacts.story_styles_config`, `checks.story_style_preset_resolved=true`, and scaled target shot-count bounds.
-3. Build `retention_brief.json` using the resolved preset. It must define the main reason to keep watching, first 2-second hook, first 10-second question, midpoint payoff, strongest ending point, spoiler policy, skipped source ranges, allowed operations, and forbidden operations.
-4. Generate at least the preset's required number of supported hooks in `hook_candidates.json`. Choose the hook/opening with the best mix of source support, visual salience, style fit, and payoff availability. Reject loud but unsupported hooks.
-5. Score `retention_shot_pool.json`. Reserve the strongest clear shots for the first 3 seconds, re-hooks, reveals, and payoffs. Prefer emotionally or visually legible shots over neutral connective shots.
-6. Generate style-appropriate script variants in `script_variants.json`. For style_01, default variants may include `A_clear_plot`, `B_aggressive_retention`, and `C_high_density_reversal`; other styles should use variants that match their `script_rules` and `selection_bias`.
-7. Select the final `script.json`, map it to `final_shots.json`, document any nonlinear shots in `nonlinear_exceptions.json`, then run `retention_qc.json`.
+3. Delegate initial story writing to `content-style-system` task `anime_clip_initial_story_write` using `references/initial_story_write.md`. Save `initial_story_seed.json`, `story_atoms.json`, and `initial_story_execution_log`; reject any seed with unsupported claims or lazy transitions such as `另一边`.
+4. Build `retention_brief.json` from `initial_story_seed.json` and the resolved preset. It must define the main reason to keep watching, first 2-second hook, first 10-second question, midpoint payoff, strongest ending point, spoiler policy, skipped source ranges, allowed operations, and forbidden operations.
+5. Generate at least the preset's required number of supported hooks in `hook_candidates.json` from `initial_story_seed.json`. Choose the hook/opening with the best mix of source support, visual salience, style fit, and payoff availability. Reject loud but unsupported hooks.
+6. Score `retention_shot_pool.json`. Reserve the strongest clear shots for the first 3 seconds, re-hooks, reveals, and payoffs. Prefer emotionally or visually legible shots over neutral connective shots.
+7. Generate style-appropriate script variants in `script_variants.json` from `initial_story_seed.json`. For style_01, default variants may include `A_clear_plot`, `B_aggressive_retention`, and `C_high_density_reversal`; other styles should use variants that match their `script_rules` and `selection_bias`.
+8. Run reference script optimization by delegating to the `content-style-system` writing skill with `references/script_reference_optimization.md`, the resolved preset, `initial_story_seed.json`, source evidence, and every script variant. The writing skill should use the single common anime optimization reference, not multiple preset pages, and it owns the selected/revised final copy recommendation. Save its JSON-compatible result as `script_reference_review.json`, save a `content_style_execution_log` that records the writing skill invocation, and require `candidate_reviews` to cover every variant. If no real Obsidian AI-vs-human samples exist, pass `script_style_guide.example_lines` and `script_style_guide.bad_good_examples` from `references/story_styles.json` as fallback references for the writing skill.
+9. Select the final `script.json`, map it to `final_shots.json`, document any nonlinear shots in `nonlinear_exceptions.json`, then run `retention_qc.json`.
 
 When mapping shots, select real shot IDs and stable source windows only. Long-shot sample frames may justify why a region is useful, but they are not selectable shots and must not appear as cut boundaries. If multiple useful moments live inside one long real shot, represent them as `source_window` ranges inside the same real shot; merge adjacent ranges from the same real shot when continuity would otherwise create a visible same-scene stutter.
 
 Hook types may include `contradiction`, `outcome_first`, `identity_mismatch`, `moral_dilemma`, `danger_countdown`, `emotional_betrayal`, `confession`, and `object_clue`.
 
-Creative QC pass thresholds come from the resolved preset unless a hard production gate overrides them. For style_01, the profile includes:
-
-- `unsupported_claims_count == 0`
-- `generic_exposition_lines <= 1`
-- first 3 seconds contain a clear subject and conflict/question
-- first 3 seconds use at least one visually legible shot
-- cold open duration <= `5s`
-- nonlinear cold open returns to main timeline <= `8s`
-- `rehook_interval_max_sec <= 10`, unless a documented emotional-hold exception exists
-- every hook has a payoff, clarification, or escalation
-- selected shot count for a 60-second short within the preset-scaled range
-- post-hook minimum shot duration >= `1.3s`
-- dialogue/confession/emotion shot minimum duration >= `1.6s`
-- post-hook main path uses contiguous source blocks
-- every script unit is bound to a source block or adjacent block pair
-- large source jumps only occur at beat/paragraph transitions and have recorded reasons
-- repeated framing penalty has been applied
-- `op_ed_overlap_count == 0`
-- `black_fade_risk_count == 0`, unless intentional and reviewed
-- `nonlinear_exceptions_count <= decisions.max_nonlinear_exceptions`
-- `monotonic_main_path == true`
-- no unrelated filler shots
-- no reused shots unless explicitly approved and recorded
+Creative QC pass thresholds come from the resolved preset unless a hard production gate overrides them. The validator loads the active preset and checks unsupported claims, generic exposition, first-3-second salience when required, cold-open duration, nonlinear exceptions and review, target shot count, post-hook/dialogue duration floors, source-block policy, script-unit binding, large-jump reasons, repetition penalty, OP/ED overlap, monotonic main path, unique-shot policy, and any style-specific fields such as style 5 `highlight_edit_plan_required`.
 
 If creative QC fails, revise the script, shot pool, hook choice, or shot mapping before review. Do not proceed to TTS.
 
@@ -1195,6 +702,8 @@ Use these hard rules when creating short-video plot narration:
 - Use supported middle beats according to the resolved preset's `script_rules.middle`. In style_01, a micro-hook is a source-supported question, reversal, danger, decision, confession, object clue, or emotional contradiction.
 - Style_01 micro-hooks must have a payoff, clarification, or escalation within 6-15 seconds; other styles follow their preset payoff cadence.
 - Explain character actions, discoveries, and stakes in source order unless reordering clearly improves comprehension.
+- Every final script unit must include `source_time` plus `sentence_source_map`. Each sentence map must record the sentence text, source time range, source shot IDs, plot function, and a TTS budget in seconds. When row 11 rewrites copy, it must update this map before shot mapping, not leave stale timings from the old sentence.
+- Write plot explanation, not visual captions. A valid sentence explains a cause, choice, consequence, danger, relationship shift, question, or payoff supported by the shot/dialogue. A line that only says what is visibly on screen without why it matters is counted as `visual_caption_line_count` and must be rewritten to zero before TTS.
 - Avoid over-amplified phrasing such as repeating "more shocking", "the biggest twist", or "most absurd" unless the current shots and dialogue directly support it.
 - Avoid "actually / more shocking / biggest twist" style phrases without source support.
 - Keep sentences short enough for subtitles.
@@ -1263,6 +772,8 @@ units=N
 selected shots=N
 target duration=N
 chosen variant=<style-appropriate variant id>
+script reference review=pass/fail
+script reference unsupported claims=0
 chosen hook=h03
 hook candidates=N
 micro-hooks=N
@@ -1293,29 +804,33 @@ creative retention QC=pass/fail
 
 After TTS, rebuild timing from the real continuous audio:
 
-1. Generate the approved narration exactly once as one continuous audio file, with the selected language, voice, and speed.
-2. Write `tts_generation_manifest.json` with provider, voice, language, text source, output file, boundary source, and cleanup scan results.
-3. Before compose, scan the active project TTS/output paths for `unit_*.mp3`, `unit_*.wav`, and `concat_units.txt`. These must not exist for the main render. Set `checks.tts_single_file_only=true`, `checks.tts_unit_audio_residue_count=0`, and `checks.tts_concat_manifest_absent=true`.
-4. Preserve sentence, word, bookmark, or cue boundary metadata from the TTS provider when available. For Edge TTS, use `WordBoundary` and set `checks.tts_word_boundaries_used=true`.
-5. If provider word boundaries are unavailable, derive cue boundaries from the continuous waveform with forced alignment or ASR timestamps. Proportional text weights are a last fallback and must be documented in QA.
-6. Build `subtitles/tts_boundary_table.json` from the target language's real TTS `WordBoundary` data with `tools/build_tts_boundary_table.py`.
-7. Run a Codex subagent to generate `subtitles/semantic_cue_plan.json` from `subtitles/tts_boundary_table.json`. Use `references/subtitle_semantic_cue_plan.md`; the subagent groups contiguous `boundary_start/boundary_end` ranges only and must preserve all boundary text after normalization.
-8. Attach the subagent boundary groups to exact word-boundary timing with `tools/build_post_tts_alignment_v145.py --require-subtitle-plan`. Do not split only by script lines, raw character count, provider token groups, or raw text proportion.
-9. Write `subtitle_timing_report.json` with timing source, boundary-table path, semantic segmentation source, cue count, max/min cue durations, max visual line length, subagent boundary-group status, coverage/mismatch counts, cross-sentence/orphan/bad-break counts, and punctuation cleanup status.
-10. For each narration line or cue group, get its owned shots.
-11. Solve shot count before speed: for a 4-second narration line, choose 1-3 real source shots, one stable window inside a long real shot, or one small contiguous block whose source duration is already near 4 seconds. Do not use analysis sample points as edit boundaries.
-12. Set the line's shot group duration equal to the real continuous-audio interval, including natural pauses.
-13. Split duration across owned shots.
-12. Trim or extend source windows before using speed changes.
-13. Use modest speed changes to match audio. Hook, post-hook, and non-hook extremes must remain within the resolved preset's `hook_speed_range`, `post_hook_speed_range`, and `absolute_non_hook_speed_range`.
-14. If speed factor falls outside range, reduce shot count, replace a shot, extend the source window, rebalance narration-to-shot ownership, or revise text before composing.
-15. Do not compress post-hook shots below `1.3s` or dialogue/emotion shots below `1.6s` to force a prechosen shot count.
-16. Do not use `tpad=clone` to make a short shot fit. Only after all better options fail may final fallback padding add 1-2 frames total, and it must be recorded in `alignment_qc_report.json`.
+1. Before production TTS, estimate duration at the anime default speed:
+   `python3 tools/estimate_tts_duration.py --project-root <project> --speed 1.2`.
+2. If `estimated_tts_duration_ratio < 0.9`, choose a longer/stronger source window or rewrite the script before synthesis.
+3. Generate the approved narration exactly once as one continuous audio file, with `AI-tts` by default:
+   `python3 tools/generate_tts_ai_tts_v145.py --project-root <project> --language <zh|en|th> --speed 1.2`.
+4. Write `tts_generation_manifest.json` with provider, language/profile, speed, text source, output file, boundary source, and cleanup scan results.
+5. Before compose, scan the active project TTS/output paths for `unit_*.mp3`, `unit_*.wav`, and `concat_units.txt`. These must not exist for the main render. Set `checks.tts_single_file_only=true`, `checks.tts_unit_audio_residue_count=0`, and `checks.tts_concat_manifest_absent=true`.
+6. Preserve real boundary metadata from AI-tts. Prefer raw AssemblyAI word timing with `timing_source=assemblyai_word_boundary`; use `assemblyai_segment_boundary` only when word boundaries are unavailable.
+7. If real provider boundaries are unavailable, stop and regenerate timing from AI-tts/AssemblyAI before subtitle planning.
+8. Build `subtitles/tts_boundary_table.json` from the target language's real TTS boundaries with `tools/build_tts_boundary_table.py` when the TTS adapter has not already produced it.
+9. Run a Codex subagent to generate `subtitles/semantic_cue_plan.json` from `subtitles/tts_boundary_table.json`. Use the project-local `references/subtitle_semantic_cue_plan.md`; the subagent groups contiguous `boundary_start/boundary_end` ranges only and must preserve all boundary text after normalization. After collecting the cue plan, call `close_agent` for that subagent before continuing.
+10. Attach the subagent boundary groups to exact real-boundary timing with `tools/build_post_tts_alignment_v145.py --require-subtitle-plan`. Do not split only by script lines, raw character count, provider token groups, or raw text proportion.
+11. Write `subtitle_timing_report.json` with timing source, boundary-table path, semantic segmentation source, cue count, max/min cue durations, max visual line length, subagent boundary-group status, coverage/mismatch counts, cross-sentence/orphan/bad-break counts, and punctuation cleanup status.
+12. For each narration line or cue group, get its owned shots.
+13. Solve shot count before speed: for a 4-second narration line, choose 1-3 real source shots, one stable window inside a long real shot, or one small contiguous block whose source duration is already near 4 seconds. Do not use analysis sample points as edit boundaries.
+14. Set the line's shot group duration equal to the real continuous-audio interval, including natural pauses.
+15. Split duration across owned shots.
+16. Trim or extend source windows before using speed changes.
+17. Use modest speed changes to match audio. Hook, post-hook, and non-hook extremes must remain within the resolved preset's `hook_speed_range`, `post_hook_speed_range`, and `absolute_non_hook_speed_range`.
+18. If speed factor falls outside range, reduce shot count, replace a shot, extend the source window, rebalance narration-to-shot ownership, or revise text before composing.
+19. Do not compress post-hook shots below `1.3s` or dialogue/emotion shots below `1.6s` to force a prechosen shot count.
+20. Do not use `tpad=clone` to make a short shot fit. Only after all better options fail may final fallback padding add 1-2 frames total, and it must be recorded in `alignment_qc_report.json`.
 
 Post-TTS pacing repair is mandatory before render:
 
 - Estimated script duration is diagnostic only. Once real TTS exists, the real TTS duration is the timeline source of truth.
-- In projects initialized from the skill template, run `tools/build_tts_boundary_table.py` immediately after full-script TTS, then run a Codex subagent to group contiguous boundary ids into `subtitles/semantic_cue_plan.json`, then run `tools/build_post_tts_alignment_v145.py --require-subtitle-plan`. This trio is the standard handoff from TTS to pacing/alignment/subtitles and must run before the pacing validator, segment render, or compose.
+- In projects initialized from the skill template, run `tools/build_tts_boundary_table.py` immediately after full-script TTS, then run a Codex subagent to group contiguous boundary ids into `subtitles/semantic_cue_plan.json`, close it with `close_agent` after collecting the plan, then run `tools/build_post_tts_alignment_v145.py --require-subtitle-plan`. This trio is the standard handoff from TTS to pacing/alignment/subtitles and must run before the pacing validator, segment render, or compose.
 - Write `post_tts_pacing_report.json` comparing estimated duration, real TTS duration, selected shot count, speed range, and repair actions.
 - If speed exceeds allowed ranges, do not render. Repair by revising script length, deleting duplicate shots, extending stable source windows, adding nearby sequential shots, or reassigning line ownership.
 - If a line cannot fit without bad speed, change shot count/source windows first; do not force 1.7x playback or 0.7x drag.
@@ -1385,12 +900,12 @@ Subtitle content rules:
 - Strip trailing display punctuation such as `，。！？、；：,.!?;:` and locale equivalents from subtitle cues and wrapped visual lines.
 - Do not remove punctuation from the narration/TTS source text solely for this display cleanup.
 - Keep cues short enough for one or two readable visual lines. Cue duration must be `>= 0.3s` and `<= 2.2s` unless an emotional hold exception is intentional and recorded; merge very short cues instead of letting them flash.
-- Plan cue text semantically with a Codex subagent before final ASS generation. The subagent must group contiguous entries from `subtitles/tts_boundary_table.json` by `boundary_start/boundary_end`; the script then uses those exact real TTS boundary times. Do not let provider `WordBoundary` grouping alone decide cue text if it spills across narration units or sentence boundaries.
+- Plan cue text semantically with a Codex subagent before final ASS generation. The subagent must group contiguous entries from `subtitles/tts_boundary_table.json` by `boundary_start/boundary_end`; close it with `close_agent` after collecting or rejecting the plan. The script then uses those exact real TTS boundary times. Do not let raw provider token grouping alone decide cue text if it spills across narration units or sentence boundaries.
 - Use script punctuation, real TTS word boundaries, and visual character limits together. Do not make subtitle timing from script-line boundaries alone.
-- For production `v1.4.9+` projects, both `subtitles/tts_boundary_table.json` and `subtitles/semantic_cue_plan.json` must exist. The cue plan must be generated by a subagent, must group contiguous boundary ids, and must preserve all boundary text after normalization. Local rule-based splitting is allowed only for diagnosis or a recorded fallback.
+- For production `v1.4.9+` projects, both `subtitles/tts_boundary_table.json` and `subtitles/semantic_cue_plan.json` must exist. The cue plan must be generated by a subagent, must group contiguous boundary ids, and must preserve all boundary text after normalization. Local scripts must not rewrite or repair semantic cue grouping; if validation finds bad phrase boundaries, regenerate the cue plan with the subagent.
 - Do not cross original sentence boundaries in one displayed cue unless a continuation is intentional and recorded. If TTS boundary grouping shifts words into the next sentence, repair by cumulative text alignment before render.
 - Record and require zero `subtitle_cross_sentence_boundary_count`, `subtitle_orphan_fragment_count`, and `subtitle_bad_line_break_count` before compose.
-- For Chinese, prefer complete semantic chunks of roughly `6-14` characters, with `4-16` allowed for timing. Avoid orphan fragments such as `被掳`, `却仍`, `她反问`, `作为他`, or `的妻子活下去`; merge them with neighboring words. Never split fixed phrases such as `皇太子妃`, `杀人不眨眼`, `亲眼见过的温柔`, `作为他的妻子`, `低成本商品`, or `治疗他妹妹的药`.
+- For Chinese, prefer complete semantic chunks of roughly `6-14` characters, with `4-16` allowed for timing. Avoid orphan fragments such as `被掳`, `却仍`, `她反问`, `作为他`, or `的妻子活下去`; merge them with neighboring words. Never split fixed phrases such as `皇太子妃`, `杀人不眨眼`, `亲眼见过的温柔`, `作为他的妻子`, `低成本商品`, or `治疗他妹妹的药`. Also reject mid-word/subphrase breaks such as `两个 / 人`, `已经不 / 对`, `起不 / 来`, `浅发 / 男人`, `求救 / 声`, `白色 / 装置`, `台 / 面上`, `放我 / 出去`, `蓝白色 / 星体`, and `一 / 招`.
 - For English, keep visual line length around 32 characters or less where possible.
 - Split subtitles with language-aware boundaries. For Thai, prefer word or phrase boundaries and timing windows; do not hard-slice by character count.
 - For English, split on natural phrase/word boundaries and avoid awkward orphan words.
